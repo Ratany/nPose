@@ -1,0 +1,11 @@
+
+This is a fork of Howard Baxtons nPose repo.
+
+All files are in a project directory which can be used with the build
+system that can be found in https://github.com/Ratany/lsl-repo
+
+The files in the src directory are symlinks to the originals because
+odd file names were used.
+
+The nPose directory containing the original files is a git repo by
+itself, cloned from https://github.com/HowardBaxton/nPose
