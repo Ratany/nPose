@@ -1,6 +1,4 @@
 *~
-*.o
-*.i
 *.clean
 TAGS
 replaceassignments.txt
