@@ -1,0 +1,212 @@
+Start version, not optimized, after script reset:
+
+[03:01:41]  nPose Dogwood Demo several examples: (19kB) ~> repo-npose-0dc42b010f263508e42e006e500d2a1053e177ca
+[03:01:42]  nPose Dogwood Demo several examples: ( 19 kB ) ~> entry 0 23928 { src/core.lsl : 458 }
+[03:01:42]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 23886 { src/core.lsl : 498 }
+[03:01:42]  nPose Dogwood Demo several examples: (19kB) ~> repo-npose-0dc42b010f263508e42e006e500d2a1053e177ca
+[03:01:42]  nPose Dogwood Demo several examples: ( 19 kB ) ~> entry 0 23928 { src/core.lsl : 458 }
+[03:01:42]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 23886 { src/core.lsl : 498 }
+[03:01:42]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 23886 { src/core.lsl : 498 }
+[03:01:43]  nPose Dogwood Demo several examples: ( 18 kB ) ~> LINKMSG 22682 { src/core.lsl : 427 }
+[03:01:44]  nPose Dogwood Demo several examples: ( 19 kB ) ~> DS data DTA 22682 { src/core.lsl : 724 }
+[03:01:44]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22682 { src/core.lsl : 498 }
+[03:01:45]  nPose Dogwood Demo several examples: ( 17 kB ) ~> LINKMSG 22184 { src/core.lsl : 427 }
+[03:01:45]  nPose Dogwood Demo several examples: ( 19 kB ) ~> DS data DTA 22184 { src/core.lsl : 724 }
+[03:01:45]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:01:45]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:01:45]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:01:46]  nPose Dogwood Demo several examples: ( 19 kB ) ~> ANIM 22184 { src/core.lsl : 333 }
+[03:01:46]  nPose Dogwood Demo several examples: ( 18 kB ) ~> DS data DTA 22184 { src/core.lsl : 724 }
+[03:01:46]  nPose Dogwood Demo several examples: ( 18 kB ) ~> ANIM 22184 { src/core.lsl : 333 }
+[03:01:46]  nPose Dogwood Demo several examples: ( 18 kB ) ~> DS data DTA 22184 { src/core.lsl : 724 }
+[03:01:46]  nPose Dogwood Demo several examples: ( 18 kB ) ~> DS data EOF 22184 { src/core.lsl : 711 }
+[03:01:46]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:01:46]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+
+Analysis:
+
+only 19kB free at state entry
+
+
+[03:06:13]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:06:13]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:06:13]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:06:13]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:06:14]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+
+after sitting on the object
+
+
+[03:06:48]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:06:48]  nPose Dogwood Demo several examples: ( 18 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:06:48]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:06:48]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+[03:06:48]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22184 { src/core.lsl : 498 }
+
+after standing up
+
+
+attempt to reduce statically used memory: replace variables used as constants with defines
+created core-constants.h
+lastStrideCount can probably be optimized
+rezadjusters is a status
+listener is obsolete
+dataid can be optimized when not several notecards are read at once, same goes for btnid, line and btnline
+cardid is obsolete when the script is always reset when the inventory changes: define _NOCARDID for this
+int x can be local
+SeatedAvs() is buggy in that it doesn´t consider the numbering of prims for linked vs. unlinked objects: fixed
+int nn in assignSlots() can probably be replaced by integer n (re-using) --- not changed
+setting the sit targets in state_entry() is buggy in that it may set a sit target for a non-existing prim when the object is linked and in that it may try to set sit targets on agents sitting on the
+object: fixed, takes more memory
+integer stop can be local
+explicitFlag is a status
+
+done, new test
+  643 16987 dbg/core.i
+
+
+after script reset:
+
+[04:29:51]  nPose Dogwood Demo several examples: (20kB) ~> repo-npose-0dc42b010f263508e42e006e500d2a1053e177ca
+[04:29:51]  nPose Dogwood Demo several examples: ( 20 kB ) ~> entry 0 24624 { src/core.lsl : 492 }
+[04:29:52]  nPose Dogwood Demo several examples: ( 20 kB ) ~> linkmsg 24582 { src/core.lsl : 546 }
+[04:29:52]  nPose Dogwood Demo several examples: (20kB) ~> repo-npose-0dc42b010f263508e42e006e500d2a1053e177ca
+[04:29:52]  nPose Dogwood Demo several examples: ( 20 kB ) ~> entry 0 24624 { src/core.lsl : 492 }
+[04:29:52]  nPose Dogwood Demo several examples: ( 20 kB ) ~> linkmsg 24582 { src/core.lsl : 546 }
+[04:29:52]  nPose Dogwood Demo several examples: ( 20 kB ) ~> linkmsg 24582 { src/core.lsl : 546 }
+[04:29:54]  nPose Dogwood Demo several examples: ( 18 kB ) ~> LINKMSG 23292 { src/core.lsl : 461 }
+[04:29:54]  nPose Dogwood Demo several examples: ( 19 kB ) ~> DS data DTA 23292 { src/core.lsl : 772 }
+[04:29:54]  nPose Dogwood Demo several examples: ( 20 kB ) ~> linkmsg 23292 { src/core.lsl : 546 }
+[04:29:55]  nPose Dogwood Demo several examples: ( 18 kB ) ~> LINKMSG 22880 { src/core.lsl : 461 }
+[04:29:55]  nPose Dogwood Demo several examples: ( 19 kB ) ~> DS data DTA 22880 { src/core.lsl : 772 }
+[04:29:55]  nPose Dogwood Demo several examples: ( 20 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> ANIM 22880 { src/core.lsl : 367 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> DS data DTA 22880 { src/core.lsl : 772 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> ANIM 22880 { src/core.lsl : 367 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> DS data DTA 22880 { src/core.lsl : 772 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> DS data EOF 22880 { src/core.lsl : 759 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:29:56]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+
+sitting:
+
+[04:32:48]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:32:48]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:32:49]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:32:49]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:32:49]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+
+standing up:
+
+[04:33:11]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:33:11]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:33:11]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:33:12]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+[04:33:12]  nPose Dogwood Demo several examples: ( 19 kB ) ~> linkmsg 22880 { src/core.lsl : 546 }
+
+696 bytes saved
+
+
+Analysis: functions can be inlined
+
+inlined: str_replace()
+optionally inline: FindEmptySlot()
+	   created core-inline.h
+inlined SwapAvatarInto()
+ReadCard() can be inlined, especially when _NOCARDID is enabled
+	   added to core-inline.h as option
+if ProcessLine() can be split into two different functions, one for
+SET and one for BTN cards, it could potentially be inlined
+
+
+done, new test
+  642 17005 dbg/core.i
+
+after reset:
+
+[06:01:37]  nPose Dogwood Demo several examples: (22kB) ~> repo-npose-0dc42b010f263508e42e006e500d2a1053e177ca
+[06:01:37]  nPose Dogwood Demo several examples: ( 22 kB ) ~> entry 0 26672 { src/core.lsl : 553 }
+[06:01:37]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 26630 { src/core.lsl : 607 }
+[06:01:37]  nPose Dogwood Demo several examples: (22kB) ~> repo-npose-0dc42b010f263508e42e006e500d2a1053e177ca
+[06:01:37]  nPose Dogwood Demo several examples: ( 22 kB ) ~> entry 0 26672 { src/core.lsl : 553 }
+[06:01:38]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 26630 { src/core.lsl : 607 }
+[06:01:38]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 26630 { src/core.lsl : 607 }
+[06:01:39]  nPose Dogwood Demo several examples: ( 20 kB ) ~> LINKMSG 25426 { src/core.lsl : 522 }
+[06:01:39]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data DTA 25426 { src/core.lsl : 833 }
+[06:01:39]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 25426 { src/core.lsl : 607 }
+[06:01:40]  nPose Dogwood Demo several examples: ( 20 kB ) ~> LINKMSG 24928 { src/core.lsl : 522 }
+[06:01:41]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data DTA 24928 { src/core.lsl : 833 }
+[06:01:41]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 24928 { src/core.lsl : 607 }
+[06:01:41]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 24928 { src/core.lsl : 607 }
+[06:01:41]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 24928 { src/core.lsl : 607 }
+[06:01:41]  nPose Dogwood Demo several examples: ( 21 kB ) ~> ANIM 24928 { src/core.lsl : 428 }
+[06:01:41]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data DTA 24928 { src/core.lsl : 833 }
+[06:01:41]  nPose Dogwood Demo several examples: ( 21 kB ) ~> ANIM 24928 { src/core.lsl : 428 }
+[06:01:42]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data DTA 24928 { src/core.lsl : 833 }
+[06:01:42]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data EOF 24928 { src/core.lsl : 820 }
+[06:01:42]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 607 }
+[06:01:42]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 607 }
+
+after sitting:
+
+can´t sit, something is broken :(
+with FindEmptySlot() inlined, it´s broken, not broken when not inlined
+
+fixed
+  642 17061 dbg/core.i
+
+after reset:
+
+[06:27:04]  nPose Dogwood Demo several examples: (22kB) ~> repo-npose-0dc42b010f263508e42e006e500d2a1053e177ca
+[06:27:04]  nPose Dogwood Demo several examples: ( 22 kB ) ~> entry 0 26672 { src/core.lsl : 559 }
+[06:27:04]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 26630 { src/core.lsl : 613 }
+[06:27:05]  nPose Dogwood Demo several examples: (22kB) ~> repo-npose-0dc42b010f263508e42e006e500d2a1053e177ca
+[06:27:05]  nPose Dogwood Demo several examples: ( 22 kB ) ~> entry 0 26672 { src/core.lsl : 559 }
+[06:27:05]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 26630 { src/core.lsl : 613 }
+[06:27:05]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 26630 { src/core.lsl : 613 }
+[06:27:07]  nPose Dogwood Demo several examples: ( 20 kB ) ~> LINKMSG 25426 { src/core.lsl : 528 }
+[06:27:07]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data DTA 25426 { src/core.lsl : 839 }
+[06:27:07]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 25426 { src/core.lsl : 613 }
+[06:27:08]  nPose Dogwood Demo several examples: ( 20 kB ) ~> LINKMSG 24928 { src/core.lsl : 528 }
+[06:27:08]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data DTA 24928 { src/core.lsl : 839 }
+[06:27:08]  nPose Dogwood Demo several examples: ( 22 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:09]  nPose Dogwood Demo several examples: ( 21 kB ) ~> ANIM 24928 { src/core.lsl : 434 }
+[06:27:09]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data DTA 24928 { src/core.lsl : 839 }
+[06:27:09]  nPose Dogwood Demo several examples: ( 20 kB ) ~> ANIM 24928 { src/core.lsl : 434 }
+[06:27:09]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data DTA 24928 { src/core.lsl : 839 }
+[06:27:10]  nPose Dogwood Demo several examples: ( 21 kB ) ~> DS data EOF 24928 { src/core.lsl : 826 }
+[06:27:10]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:10]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:10]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:10]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+
+
+sitting:
+
+[06:27:38]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:38]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:38]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:38]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:38]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+
+
+stand up:
+
+[06:27:57]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:57]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:57]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:57]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+[06:27:57]  nPose Dogwood Demo several examples: ( 21 kB ) ~> linkmsg 24928 { src/core.lsl : 613 }
+
+
+saved: 2048/2048, total: 2744/2744
+
+
+give to Howard to check, without memory info
+  626 15002 dbg/core.i
+
+
+
+Analysis: obsolete casts can be removed
