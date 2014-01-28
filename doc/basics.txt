@@ -1,0 +1,283 @@
+nPose uses one notecard to give the nPose engine all the information
+it needs for each pose set (one notecard for each pose set or other
+button on the menus).  A pose set can be one sitter or multiple
+sitters.  (See Below)
+
+Menus:
+----------------------
+
+nPose builds its menus from the names of notecards that you
+provide. This makes it easy to add new animations, or sets of
+animations, or buttons that do other things. It is important to
+remember that nPose uses the NAMES of the notecards to build the
+structure of the menus and sub-menus, and the CONTENTS of the notecard
+to control what the menu buttons do. This isn't as confusing as it
+sounds. SET is a key word for nPose and gives the engine a heads up
+that this notecard contains a pose.  Use a colon ":" as the sub menu
+separator.
+
+Examples of notecards named:
+
+SET:Sleep
+SET:Sit:GirlSit
+SET:Sit:BoySit2
+SET:Sit:TinySit3
+SET:Stand:Shy-stand1
+SET:Stand:Hero-stand
+
+The names of notecards above would give a menu with 3 user buttons at
+the top level, Sleep, Sit, and Stand. Then within the "Sit" menu (as a
+sub-menu) one would see GirlSit, Boysit2, and Tinysit3. Stand would
+contain a sub menu with two buttons (Shy, and Hero).  Shy would have a
+sub menu of one button with the name "stand1", and Hero would have a
+sub menu with one button named "stand".  Remember, menu structure is
+determined by the NAMES of your notecards! We'll get to the contents
+of the notecards in just a bit.
+
+Now, there are several types of notecards that nPose recognizes and it
+uses them for different purposes. The most common of these are the SET
+notecards. These are the ones we showed above, and they are usually
+used to make animation poses or sets. . The first part of the notecard
+name will be the TYPE of notecard (we are using SET). This is always
+followed by a colon ":", and after the colon, the menu and sub-menu
+buttons. Let's look at a particular example:
+
+This is a simple example that puts up a menu that doesn't do much. It
+contains one notecard named
+
+    SET:Pose1
+
+􀀀
+
+which is empty. Empty notecards are allowed by nPose, they just don't
+do much except give a menu button.  (A few exceptions are for nPose
+built-in functions.)
+
+
+SubMenus:
+----------------------------
+
+The number of submenus that nPose supports is only limited to the
+number of characters allowed by SL. Setting up the submenus is very
+easy.  The nPose engine uses the notecard NAMES to build menus.  For
+two submenus, one for Singles and one for Couples, simply add them to
+the notecard name with the colon ":" separator as follows:
+
+
+SET:Singles:Pose1
+SET:Singles:Pose2
+....
+
+
+Now the root menu will have a button with "Singles" on it.  To get to
+the poses (Pose1 and Pose2), the user clicks the "Singles" button and
+another menu will come up, showing Pose1 and Pose2. Add some more
+notecards named as follows:
+
+
+SET:Couples:Pose1
+SET:Couples:Pose2
+...
+
+
+Now the root menu will have two buttons (Singles and Couples), each
+with two poses. Unlike other systems, there is no problem in nPose to
+have the same name button on different sub-menus. Remember, what the
+button does is determined by the CONTENTS of the notecards, not by the
+name.
+
+The following object is a demo of what the menu would be like with all
+the above notecards inside of nPose.  They will not actually do
+anything at this time as the notecards are empty.
+
+Rez the nPose Menu Demo 2 and click it for the menu.
+
+  􀀁
+
+_______________________________________________________________________________________
+
+Summary of Notecard types:
+
+Remember, nPose uses the NAME of its notecards to determine the menu
+structure and button names. It uses the CONTENTS of the notecard to
+determine what it does. This is true for all of the types of
+notecards, except that different types are used to perform different
+functions. The type of notecard is determined by the first part of the
+name, that is, by everything in front of the first colon (":"). Don't
+put in spaces, this is a common error!
+
+
+Notecard TYPE           Use
+-----------------           ------------------------------------
+SET                             Animations and poses, can send messages
+DEFAULT                     Animations and poses, can send messages
+BTN                            Send messages to scripts
+SEQ                            Define sequences of pose sets.
+
+
+It is important not to use SET and DEFAULT types unless you want an
+animation to play or be reset. If you want, for example, just to turn
+music on or off, use BTN, not SET. You'd use SET when you want music
+to turn on, AND the avatar to start dancing. For more advanced users,
+the difference is that SET and DEFAULT have side effects, but BTN does
+not. If a SET notecard has fewer ANIM lines (see below) than the
+number of avatars currently sitting on the object, nPose will kick
+some of them off.
+
+More details on each type are provided below:
+
+==============SET=====================
+
+    This notecard is most commonly used to tell the nPose engine it
+    has an animation within.  It defines the number of sitters, their
+    pose, their position and rotation and facial expressions.  It can
+    also be used for doing specific things when someone sits or when
+    someone stands.  Props can be rezzed specific to a scene. Messages
+    can be sent to other scripts. The general format of the text
+    inside a SET notecard to trigger an animation is (without spacing
+    before the ANIM or other keyword):
+
+
+	ANIM|meditation|<-0.3,0,0.8>|<0,0,0>
+
+
+where ANIM says that this line describes an animation, and "mediation"
+is the name of the animation (which must be included in the nPose
+object), and the rest is a position offset and rotation. There is one
+ANIM line for each avatar who can sit on the nPose object. You can put
+<0,0,0> for both position and rotation, and use the nPose adjustment
+tool to find the proper values. We'll describe how later. You can also
+include LINKMSG and other types of lines in the SET notecards, and
+those will be described later
+also. =====================================
+
+=============DEFAULT===================
+
+    This notecard is the same as SET except it's contents become the
+    default pose set when nPose is first initialized.  If no DEFAULT
+    notecard is included in the contents of the nPose object, nPose
+    will use the first notecard in the contents (alpabetically) as a
+    DEFAULT.
+
+(Do not add the same notecard as a DEFAULT and also as a SET as this
+will only confuse the nPose engine.)
+
+=====================================
+
+
+=============BTN=====================
+
+    This notecard type is used to send messages to other scripts
+    immediately and typically used to communicate with other scripts
+    (mostly plugin scripts) in the nPose build or props.  This is a
+    powerful notecard type and can be used for a wide variety of
+    things.
+
+ The most common thing to put in BTN notecard is LINKMSG lines. These
+ have the general format (again without leading spaces):
+
+
+	LINKMSG|msg-number|user-string|some-key
+
+
+ where msg-number is some number set by convention (see the LINKMSG
+messages notecard) and the remaining (optional) fields are defined by
+the message number. =====================================
+
+
+=============SEQ========================
+
+    This notecard type is used to setup sequences of pose sets.  It
+    communicates to the modified Rygel sequencer script. Details are
+    provided later.
+
+
+
+
+
+
+=============Lines inside notecards=============
+
+
+'COMMAND'|'POSE NAME'|'POSITION VECTOR'|'ROTATION VECTOR'|
+
+
+Notecard commands supported: The nPose engine sorts out what it needs
+to do with any particular line by the first word of the line:
+Supported commands are as follows: ANIM This tells the nPose engine
+that this line contains information about an animation.
+
+
+    ANIM|meditation|<-0.0,0,0.0>|<0,0,0>
+
+
+    In the above example nPose is going to look in contents for the
+    animation named "meditation" and position the seated AV with the
+    first vector (at the very center of the root prim and rotate the
+    AV with the second vector or zero rotation.  This is a good
+    example to use and adjusting can be done later.
+
+
+PROP
+
+    This tells the nPose engine that this line contains information
+    about a prop that is to be rezzed when this pose set is selected.
+
+    PROP|Lamp|<-0.0,0,0.0>|<0,0,0>
+
+    In the above example nPose will look in its contents for an object
+    by the name of "Lamp".  The Lamp will be rezzed at the very center
+    of the root prim with zero rotation.  If the Lamp contains the
+    nPose Prop plugin script it will chat to local any new position
+    once it has been moved.  The line in local can be copied and
+    pasted into the notecard containing the above line for permanent
+    new position and rotation.
+
+
+LINKMSG
+
+    This tells the nPose engine that this line contains the
+    information about a message to be sent out to other scripts.
+    LINKMSGs are sent out as soon as they have been read from the
+    notecard.
+
+    LINKMSG|-999|RezHud
+
+    In the above example when nPose reads this line, it will generate
+    a message and send it out to all scripts in the build.  The
+    message will have a unique identifier of "-999" and will send the
+    message "RezHud" for any scripts that are looking for this unique
+    identifier.  The message "RezHud" must mean something to some
+    script.  In this particular case a script is looking for this
+    message and interprets the message as a command to rez the admin
+    hud to be temp attached to the owner's AV.
+
+
+SATMSG
+
+    This tells the nPose engine that this line contains information
+    about what to do when someone sits this seat.  These are exactly
+    the same as the LINKMSG above except they are saved and only sent
+    out if and when a new AV sits in this seat.
+
+    SATMSG|5001|Mmmmmmhhooo|
+
+    In the above example when a new AV sits in this seat, this message
+    of "Mmmmmmhhooo" will be sent out with the unique identifier of
+    "5001" for any listening script to act upon.  In this particular
+    case a plugin is looking for the unique identifier and will say in
+    local the message.
+
+
+NOTSATMSG
+
+    This tells the nPose engine that this line contains information
+    about what to do when someone move or stands from this seat.  It
+    is exactly like the LINKMSG or SATMSG except for when it is sent
+    out.
+
+    NOTSATMSG|5001|Ohhmmmmmm
+
+    In the above example when the AV seated in this seat moves to
+    another seat or stands, the message of "Ohhmmmmmm" will be said in
+    local.
