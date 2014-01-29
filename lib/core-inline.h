@@ -5,3 +5,8 @@
 // it suffices to define this
 //
 #define _INLINE_FindEmptySlot
+
+
+// define this to use the function sits() instead of an inlined version
+//
+#define _OUTLINE_virtualboolIsSitting

@@ -23,7 +23,7 @@ integer slotMax = 0;
 list slots;
 integer curPrimCount = 0;
 integer lastPrimCount = 0;
-integer lastStrideCount = 12;
+integer lastStrideCount;
 integer rezadjusters;
 integer line;
 key dataid;
@@ -36,30 +36,22 @@ string btncard;
 list adjusters;
 key hudId;
 integer explicitFlag = 0;
-list SeatedAvs()
+integer sits(key k)
 {
-	list avs = [];
-	integer n = llGetNumberOfPrims();
-
-	while(n)
+	integer b;
 	{
-		key id = llGetLinkKey(n);
+		integer $_ = llGetNumberOfPrims();
+		b = $_;
 
-		if(llGetAgentSize(id) != ZERO_VECTOR)
+		while($_ && !(b = !(llGetLinkKey($_) != k)) && (ZERO_VECTOR != llGetAgentSize(llGetLinkKey($_))))
 		{
-			avs = [id] + avs;
+			--$_;
 		}
-
-		--n;
 	}
-
-	return avs;
+	return b;
 }
 assignSlots()
 {
-	list avqueue = SeatedAvs();
-	integer stop = llGetListLength(avqueue);
-
 	if(slotMax < lastStrideCount)
 	{
 		integer x = slotMax;
@@ -68,15 +60,14 @@ assignSlots()
 		{
 			if(llList2Key(slots, x * 8 + 4) != "")
 			{
-				integer emptySlot;
-				emptySlot = 0;
+				integer emptySlot = 0;
 
 				while((emptySlot < slotMax) && (llList2String(slots, emptySlot * 8 + 4) != ""))
 				{
 					++emptySlot;
 				}
 
-				emptySlot *= ((emptySlot != slotMax) - (emptySlot == slotMax));
+				emptySlot = emptySlot * ((emptySlot != slotMax) - (emptySlot == slotMax)) - !slotMax;
 
 				if(emptySlot >= 0)
 				{
@@ -87,30 +78,31 @@ assignSlots()
 			++x;
 		}
 
-		slots = llDeleteSubList(slots, (slotMax) * 8, -1);
-		integer n = 0;
+		slots = llDeleteSubList(slots, slotMax * 8, -1);
+		integer n = llGetListLength(slots) / 8;
 
-		while(n < stop)
+		while(n)
 		{
-			if(llListFindList(slots, [llList2Key(avqueue, n)]) < 0)
-			{
-				llMessageLinked(LINK_SET, -222, llList2String(avqueue, n), NULL_KEY);
-			}
+			--n;
 
-			++n;
+			if(!sits(llList2Key(slots, 4 + 8 * (n))))
+			{
+				llMessageLinked(LINK_SET, -222, (string)llList2Key(slots, 4 + 8 * (n)), NULL_KEY);
+			}
 		}
 	}
 
-	if(curPrimCount > lastPrimCount)
+	key thisKey = llGetLinkKey(llGetNumberOfPrims());
+
+	if((curPrimCount > lastPrimCount) && (ZERO_VECTOR != llGetAgentSize(thisKey)))
 	{
-		key thisKey = llList2Key(avqueue, stop - 1);
 		integer primcount = llGetObjectPrimCount(llGetKey());
 		integer slotNum = -1;
 		integer n = 1;
 
 		while(n <= primcount)
 		{
-			integer x = (integer)llGetSubString(llGetLinkName(n), 4, -1);
+			integer x = (integer)llGetLinkName(n);
 
 			if((x > 0) && (x <= slotMax))
 			{
@@ -118,7 +110,7 @@ assignSlots()
 				{
 					if(llList2String(slots, (x - 1) * 8 + 4) == "")
 					{
-						slotNum = (integer)llGetLinkName(n);
+						slotNum = x;
 					}
 				}
 			}
@@ -126,11 +118,9 @@ assignSlots()
 			++n;
 		}
 
-		integer nn;
-
-		for(nn = 1; nn <= primcount; ++nn)
+		for(n = 1; n <= primcount; ++n)
 		{
-			if(slotNum != -1 && llListFindList(slots, [thisKey]) == -1)
+			if(~slotNum && (!~llListFindList(slots, [thisKey])))
 			{
 				if(slotNum <= slotMax)
 				{
@@ -138,67 +128,76 @@ assignSlots()
 				}
 				else
 				{
-					integer y;
-					y = 0;
+					llOwnerSay(llDumpList2String(["(", (61440 - llGetUsedMemory()) >> 10, "kB ) ~>", "irregular slot", "{", "src/core.lsl", ":", 325, "}"], " "));
+					integer y = 0;
 
 					while((y < slotMax) && (llList2String(slots, y * 8 + 4) != ""))
 					{
 						++y;
 					}
 
-					y *= ((y != slotMax) - (y == slotMax));
+					y = y * ((y != slotMax) - (y == slotMax)) - !slotMax;
 
 					if(y >= 0)
 					{
 						slots = llListReplaceList(slots, [thisKey], y * 8 + 4, y * 8 + 4);
 					}
 					else
-						if(llListFindList(SeatedAvs(), [thisKey]) != -1)
+					{
+						if(sits(thisKey))
 						{
 							llMessageLinked(LINK_SET, -222, (string)thisKey, NULL_KEY);
 						}
+					}
 				}
+
+				n = primcount << 1;
 			}
 
-			if(llListFindList(slots, [thisKey]) == -1)
+			if((!~llListFindList(slots, [thisKey])))
 			{
-				integer y;
-				y = 0;
+				integer y = 0;
 
 				while((y < slotMax) && (llList2String(slots, y * 8 + 4) != ""))
 				{
 					++y;
 				}
 
-				y *= ((y != slotMax) - (y == slotMax));
+				y = y * ((y != slotMax) - (y == slotMax)) - !slotMax;
 
 				if(y >= 0)
 				{
 					slots = llListReplaceList(slots, [thisKey], y * 8 + 4, y * 8 + 4);
 				}
 				else
-					if(llListFindList(SeatedAvs(), [thisKey]) != -1)
+				{
+					if(sits(thisKey))
 					{
 						llMessageLinked(LINK_SET, -222, (string)thisKey, NULL_KEY);
 					}
+				}
+
+				n = primcount << 1;
 			}
 		}
 	}
 	else
+	{
 		if(curPrimCount < lastPrimCount)
 		{
-			integer x = 0;
+			integer n = llGetListLength(slots) / 8;
 
-			while(x < slotMax)
+			while(n)
 			{
-				if(llListFindList(avqueue, [llList2Key(slots, x * 8 + 4)]) < 0)
-				{
-					slots = llListReplaceList(slots, [""], x * 8 + 4, x * 8 + 4);
-				}
+				--n;
 
-				++x;
+				if(!sits(llList2Key(slots, 4 + 8 * (n))))
+				{
+					slots = llListReplaceList(slots, [""], n * 8 + 4, n * 8 + 4);
+				}
 			}
 		}
+	}
 
 	lastPrimCount = curPrimCount;
 	lastStrideCount = slotMax;
@@ -236,14 +235,14 @@ ProcessLine(string line, key av)
 	{
 		if(slotMax < lastStrideCount)
 		{
-			slots = llListReplaceList(slots, [llList2String(params, 1), (vector)llList2String(params, 2),
-			                                  llEuler2Rot((vector)llList2String(params, 3) * DEG_TO_RAD), llList2String(params, 4), llList2Key(slots, (slotMax) * 8 + 4),
-			                                  "", "", "seat" + (string)(slotMax + 1)], (slotMax) * 8, (slotMax) * 8 + 7);
+			slots = llListReplaceList(slots, [llList2String(params, 1), llList2Vector(params, 2),
+			                                  llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD), llList2Key(params, 4), llList2String(slots, (slotMax) * 8 + 4),
+			                                  "", "", "seat" + (string)(slotMax + 1)], slotMax * 8, slotMax * 8 + 7);
 		}
 		else
 		{
-			slots += [llList2String(params, 1), (vector)llList2String(params, 2),
-			          llEuler2Rot((vector)llList2String(params, 3) * DEG_TO_RAD), llList2String(params, 4), "", "", "", "seat" + (string)(slotMax + 1)];
+			slots += [llList2String(params, 1), llList2Vector(params, 2),
+			          llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD), llList2String(params, 4), "", "", "", "seat" + (string)(slotMax + 1)];
 		}
 
 		slotMax++;
@@ -258,7 +257,8 @@ ProcessLine(string line, key av)
 		{
 			integer slotindex = llListFindList(slots, [clicker]) - 4;
 			slots = llListReplaceList(slots, [llList2String(params, 1), (vector)llList2String(params, 2),
-			                                  llEuler2Rot((vector)llList2String(params, 3) * DEG_TO_RAD), llList2String(params, 4), llList2Key(slots,
+			                                  llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD), llList2String(params, 4),
+			                                  llList2Key(slots,
 			                                          slotindex + 4), "", "", llList2String(slots, slotindex + 7)], slotindex, slotindex + 7);
 		}
 
@@ -292,7 +292,7 @@ ProcessLine(string line, key av)
 
 				vector vDelta = (vector)llList2String(params, 2);
 				vector pos = llGetPos() + (vDelta * llGetRot());
-				rotation rot = llEuler2Rot((vector)llList2String(params, 3) * DEG_TO_RAD) * llGetRot();
+				rotation rot = llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD) * llGetRot();
 
 				if(llVecMag(vDelta) > 9.9)
 				{
@@ -353,8 +353,7 @@ default
 {
 	state_entry()
 	{
-		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-2dd398761846c8326441f1c0294a6bdb71e5b923");
-		curPrimCount = llGetNumberOfPrims();
+		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-6db4a847178f5ec21219eb3c687aa6af14ca7bc7");
 		integer n = llGetObjectPrimCount(llGetKey());
 
 		if(!(n))
@@ -380,7 +379,7 @@ default
 		{
 			card = llGetInventoryName(INVENTORY_NOTECARD, n);
 
-			if((llSubStringIndex(card, "DEFAULT:") == 0) || (llSubStringIndex(card, "SET:") == 0))
+			if(!(llSubStringIndex(card, "DEFAULT:") && llSubStringIndex(card, "SET:")))
 			{
 				llMessageLinked(LINK_SET, 200, card, NULL_KEY);
 				return;
@@ -582,7 +581,7 @@ default
 			vector newpos = (vector)llList2String(params, 0) - llGetPos();
 			newpos /= llGetRot();
 			rotation newrot = llList2Rot(params, 1) / llGetRot();
-			string $_ = llDumpList2String(["\nPROP", name, "|", newpos, llRot2Euler(newrot) * RAD_TO_DEG, llList2String(params, 2)], "|");
+			string $_ = "\nPROP|" + name + "|" + (string)newpos + "|" + (string)(llRot2Euler(newrot) * RAD_TO_DEG) + "|" + llList2String(params, 2);
 			llRegionSayTo(llGetOwner(), 0, $_);
 			llMessageLinked(LINK_SET, 34333, $_, NULL_KEY);
 		}

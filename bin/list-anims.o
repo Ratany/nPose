@@ -12,5 +12,5 @@
 // along with this program.  If not, see
 // <http://www.gnu.org/licenses/>.
 // =repo-npose/list-anims.o
-// compiled Tue Jan 28 10:59:09 2014 UTC
+// compiled Wed Jan 29 12:03:53 2014 UTC
 default{touch_start(integer vAA){integer $_=llGetInventoryNumber(INVENTORY_ANIMATION);if(!($_)){llOwnerSay("("+(string)((61440-llGetUsedMemory())>>10)+"kB) ~> no animations found");}while($_){--$_;string vAB=llGetInventoryName(INVENTORY_ANIMATION,$_);if(llGetInventoryKey(vAB)!=NULL_KEY){llOwnerSay("("+(string)((61440-llGetUsedMemory())>>10)+"kB) ~> "+vAB);}else{llOwnerSay(llDumpList2String(["(",(61440-llGetUsedMemory())>>10,"kB ) ~>",vAB,"has ZERO_KEY as UUID"]," "));}}}}
