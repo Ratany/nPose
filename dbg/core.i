@@ -50,159 +50,6 @@ integer sits(key k)
 	}
 	return b;
 }
-assignSlots()
-{
-	if(slotMax < lastStrideCount)
-	{
-		integer x = slotMax;
-
-		while(x <= lastStrideCount)
-		{
-			if(llList2Key(slots, x * 8 + 4) != "")
-			{
-				integer emptySlot = 0;
-
-				while((emptySlot < slotMax) && (llList2String(slots, emptySlot * 8 + 4) != ""))
-				{
-					++emptySlot;
-				}
-
-				emptySlot = emptySlot * ((emptySlot != slotMax) - (emptySlot == slotMax)) - !slotMax;
-
-				if(emptySlot >= 0)
-				{
-					slots = llListReplaceList(slots, [llList2Key(slots, x * 8 + 4)], emptySlot * 8 + 4, emptySlot * 8 + 4);
-				}
-			}
-
-			++x;
-		}
-
-		slots = llDeleteSubList(slots, slotMax * 8, -1);
-		integer n = llGetListLength(slots) / 8;
-
-		while(n)
-		{
-			--n;
-
-			if(!sits(llList2Key(slots, 4 + 8 * (n))))
-			{
-				llMessageLinked(LINK_SET, -222, (string)llList2Key(slots, 4 + 8 * (n)), NULL_KEY);
-			}
-		}
-	}
-
-	key thisKey = llGetLinkKey(llGetNumberOfPrims());
-
-	if((curPrimCount > lastPrimCount) && (ZERO_VECTOR != llGetAgentSize(thisKey)))
-	{
-		integer primcount = llGetObjectPrimCount(llGetKey());
-		integer slotNum = -1;
-		integer n = 1;
-
-		while(n <= primcount)
-		{
-			integer x = (integer)llGetLinkName(n);
-
-			if((x > 0) && (x <= slotMax))
-			{
-				if(llAvatarOnLinkSitTarget(n) == thisKey)
-				{
-					if(llList2String(slots, (x - 1) * 8 + 4) == "")
-					{
-						slotNum = x;
-					}
-				}
-			}
-
-			++n;
-		}
-
-		for(n = 1; n <= primcount; ++n)
-		{
-			if(~slotNum && (!~llListFindList(slots, [thisKey])))
-			{
-				if(slotNum <= slotMax)
-				{
-					slots = llListReplaceList(slots, [thisKey], (slotNum - 1) * 8 + 4, (slotNum - 1) * 8 + 4);
-				}
-				else
-				{
-					llOwnerSay(llDumpList2String(["(", (61440 - llGetUsedMemory()) >> 10, "kB ) ~>", "irregular slot", "{", "src/core.lsl", ":", 325, "}"], " "));
-					integer y = 0;
-
-					while((y < slotMax) && (llList2String(slots, y * 8 + 4) != ""))
-					{
-						++y;
-					}
-
-					y = y * ((y != slotMax) - (y == slotMax)) - !slotMax;
-
-					if(y >= 0)
-					{
-						slots = llListReplaceList(slots, [thisKey], y * 8 + 4, y * 8 + 4);
-					}
-					else
-					{
-						if(sits(thisKey))
-						{
-							llMessageLinked(LINK_SET, -222, (string)thisKey, NULL_KEY);
-						}
-					}
-				}
-
-				n = primcount << 1;
-			}
-
-			if((!~llListFindList(slots, [thisKey])))
-			{
-				integer y = 0;
-
-				while((y < slotMax) && (llList2String(slots, y * 8 + 4) != ""))
-				{
-					++y;
-				}
-
-				y = y * ((y != slotMax) - (y == slotMax)) - !slotMax;
-
-				if(y >= 0)
-				{
-					slots = llListReplaceList(slots, [thisKey], y * 8 + 4, y * 8 + 4);
-				}
-				else
-				{
-					if(sits(thisKey))
-					{
-						llMessageLinked(LINK_SET, -222, (string)thisKey, NULL_KEY);
-					}
-				}
-
-				n = primcount << 1;
-			}
-		}
-	}
-	else
-	{
-		if(curPrimCount < lastPrimCount)
-		{
-			integer n = llGetListLength(slots) / 8;
-
-			while(n)
-			{
-				--n;
-
-				if(!sits(llList2Key(slots, 4 + 8 * (n))))
-				{
-					slots = llListReplaceList(slots, [""], n * 8 + 4, n * 8 + 4);
-				}
-			}
-		}
-	}
-
-	lastPrimCount = curPrimCount;
-	lastStrideCount = slotMax;
-	llMessageLinked(LINK_SET, 35353, llDumpList2String(slots, "^"), NULL_KEY);
-}
 SwapTwoSlots(integer currentseatnum, integer newseatnum)
 {
 	if(newseatnum <= slotMax)
@@ -210,10 +57,10 @@ SwapTwoSlots(integer currentseatnum, integer newseatnum)
 		integer OldSlot = llListFindList(slots, ["seat" + (string)currentseatnum]) / 8;
 		integer NewSlot = llListFindList(slots, ["seat" + (string)newseatnum]) / 8;
 		list curslot = llList2List(slots, NewSlot * 8, NewSlot * 8 + 3)
-		               + [llList2Key(slots, OldSlot * 8 + 4)]
+		               + [llList2Key(slots, 4 + 8 * (OldSlot))]
 		               + llList2List(slots, NewSlot * 8 + 5, NewSlot * 8 + 7);
 		slots = llListReplaceList(slots, llList2List(slots, OldSlot * 8, OldSlot * 8 + 3)
-		                          + [llList2Key(slots, NewSlot * 8 + 4)]
+		                          + [llList2Key(slots, 4 + 8 * (NewSlot))]
 		                          + llList2List(slots, OldSlot * 8 + 5, OldSlot * 8 + 7), OldSlot * 8, (OldSlot + 1) * 8 - 1);
 		slots = llListReplaceList(slots, curslot, NewSlot * 8, (NewSlot + 1) * 8 - 1);
 	}
@@ -251,19 +98,25 @@ ProcessLine(string line, key av)
 
 	if("SINGLE" == action)
 	{
-		integer posIndex = llListFindList(slots, [(vector)llList2String(params, 2)]);
+		integer posIndex = llListFindList(slots, [llList2Vector(params, 2)]);
 
 		if((posIndex == -1) || ((posIndex != -1) && llList2String(slots, posIndex - 1) != llList2String(params, 1)))
 		{
 			integer slotindex = llListFindList(slots, [clicker]) - 4;
-			slots = llListReplaceList(slots, [llList2String(params, 1), (vector)llList2String(params, 2),
+			slots = llListReplaceList(slots, [llList2String(params, 1), llList2Vector(params, 2),
 			                                  llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD), llList2String(params, 4),
 			                                  llList2Key(slots,
 			                                          slotindex + 4), "", "", llList2String(slots, slotindex + 7)], slotindex, slotindex + 7);
+			integer newmax = (slotindex + 7 + 8 - 7) / 8;
+
+			if(newmax > slotMax)
+			{
+				llOwnerSay(llDumpList2String(["(", (61440 - llGetUsedMemory()) >> 10, "kB ) ~>", "slot gap:", newmax - slotMax, "slots", "{", "src/core.lsl", ":", 330, "}"], " "));
+				slotMax = newmax;
+				lastStrideCount = slotMax;
+			}
 		}
 
-		slotMax = llGetListLength(slots) / 8;
-		lastStrideCount = slotMax;
 		return;
 	}
 
@@ -290,7 +143,7 @@ ProcessLine(string line, key av)
 					explicitFlag = 0;
 				}
 
-				vector vDelta = (vector)llList2String(params, 2);
+				vector vDelta = llList2Vector(params, 2);
 				vector pos = llGetPos() + (vDelta * llGetRot());
 				rotation rot = llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD) * llGetRot();
 
@@ -302,7 +155,7 @@ ProcessLine(string line, key av)
 				}
 				else
 				{
-					llRezAtRoot(obj, llGetPos() + ((vector)llList2String(params, 2) * llGetRot()), ZERO_VECTOR, rot, chatchannel);
+					llRezAtRoot(obj, llGetPos() + (llList2Vector(params, 2) * llGetRot()), ZERO_VECTOR, rot, chatchannel);
 				}
 			}
 		}
@@ -312,18 +165,14 @@ ProcessLine(string line, key av)
 
 	if("LINKMSG" == action)
 	{
-		integer num = (integer)llList2String(params, 1);
+		integer num = llList2Integer(params, 1);
 		string line1 = llDumpList2String(llParseStringKeepNulls(line, ["%AVKEY%"], []), av);
 		list params1 = llParseString2List(line1, ["|"], []);
-		key lmid;
+		key lmid = llList2Key(params1, 3);
 
-		if((key)llList2String(params1, 3) != "")
+		if(lmid == "")
 		{
-			lmid = (key)llList2String(params1, 3);
-		}
-		else
-		{
-			lmid = (key)llList2String(slots, (slotMax - 1) * 8 + 4);
+			lmid = llList2Key(slots, 4 + 8 * (slotMax - 1));
 		}
 
 		string str = llList2String(params1, 2);
@@ -353,7 +202,7 @@ default
 {
 	state_entry()
 	{
-		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-6db4a847178f5ec21219eb3c687aa6af14ca7bc7");
+		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-ea6199722703518c081091ce7872a6482d19da02");
 		integer n = llGetObjectPrimCount(llGetKey());
 
 		if(!(n))
@@ -443,11 +292,10 @@ default
 
 			if(id != NULL_KEY)
 			{
-				msg = llListReplaceList((msg = []) + msg, [id], 2, 2);
+				msg = llListReplaceList(msg, [id], 2, 2);
 			}
 
-			llRegionSay(chatchannel, llDumpList2String(["LINKMSG", (string)llList2String(msg, 0),
-			            llList2String(msg, 1), (string)llList2String(msg, 2)], "|"));
+			llRegionSay(chatchannel, llDumpList2String(["LINKMSG"] + llList2List(msg, 0, 2), "|"));
 			return;
 		}
 
@@ -456,7 +304,7 @@ default
 			if(llGetListLength(slots) / 8 >= 2)
 			{
 				list seats2Swap = llParseString2List(str, [","], []);
-				SwapTwoSlots((integer)llList2String(seats2Swap, 0), (integer)llList2String(seats2Swap, 1));
+				SwapTwoSlots(llList2Integer(seats2Swap, 0), llList2Integer(seats2Swap, 1));
 			}
 
 			return;
@@ -487,9 +335,9 @@ default
 
 			for(slotNum = 0; slotNum < listStop; ++slotNum)
 			{
-				slots = llListReplaceList(slots, [llList2String(tempList, slotNum * 8), (vector)llList2String(tempList, slotNum * 8 + 1),
-				                                  (rotation)llList2String(tempList, slotNum * 8 + 2), llList2String(tempList, slotNum * 8 + 3),
-				                                  (key)llList2String(tempList, slotNum * 8 + 4), llList2String(tempList, slotNum * 8 + 5),
+				slots = llListReplaceList(slots, [llList2String(tempList, slotNum * 8), llList2Vector(tempList, slotNum * 8 + 1),
+				                                  llList2Rot(tempList, slotNum * 8 + 2), llList2String(tempList, slotNum * 8 + 3),
+				                                  llList2Key(tempList, slotNum * 8 + 4), llList2String(tempList, slotNum * 8 + 5),
 				                                  llList2String(tempList, slotNum * 8 + 6), llList2String(tempList, slotNum * 8 + 7)], slotNum * 8, slotNum * 8 + 7);
 			}
 
@@ -578,7 +426,7 @@ default
 			}
 
 			list params = llParseString2List(message, ["|"], []);
-			vector newpos = (vector)llList2String(params, 0) - llGetPos();
+			vector newpos = llList2Vector(params, 0) - llGetPos();
 			newpos /= llGetRot();
 			rotation newrot = llList2Rot(params, 1) / llGetRot();
 			string $_ = "\nPROP|" + name + "|" + (string)newpos + "|" + (string)(llRot2Euler(newrot) * RAD_TO_DEG) + "|" + llList2String(params, 2);
@@ -590,21 +438,67 @@ default
 	{
 		if(id == dataid)
 		{
-			if(data == EOF)
-			{
-				assignSlots();
-
-				if(rezadjusters)
-				{
-					adjusters = [];
-					llMessageLinked(LINK_SET, 2, "RezAdjuster", "");
-				}
-			}
-			else
+			if(!(EOF == data))
 			{
 				ProcessLine(data, clicker);
 				line++;
 				dataid = llGetNotecardLine(card, line);
+				return;
+			}
+
+			if(slotMax < lastStrideCount)
+			{
+				integer emptySlot;
+				emptySlot = 0;
+
+				while((emptySlot < slotMax) && (llList2String(slots, emptySlot * 8 + 4) != ""))
+				{
+					++emptySlot;
+				}
+
+				emptySlot = emptySlot * ((emptySlot != slotMax) - (emptySlot == slotMax)) - !slotMax;
+				integer x = slotMax;
+
+				while(x <= lastStrideCount)
+				{
+					key agent = llList2Key(slots, 4 + 8 * (x));
+
+					if(agent)
+					{
+						if(!(emptySlot < 0))
+						{
+							if(sits((key)agent))
+							{
+								llMessageLinked(LINK_SET, -222, agent, NULL_KEY);
+							}
+						}
+						else
+						{
+							slots = llListReplaceList(slots, [llList2Key(slots, x * 8 + 4)], emptySlot * 8 + 4, emptySlot * 8 + 4);
+							emptySlot = 0;
+
+							while((emptySlot < slotMax) && (llList2String(slots, emptySlot * 8 + 4) != ""))
+							{
+								++emptySlot;
+							}
+
+							emptySlot = emptySlot * ((emptySlot != slotMax) - (emptySlot == slotMax)) - !slotMax;
+						}
+					}
+
+					++x;
+				}
+
+				slots = llDeleteSubList(slots, slotMax * 8, -1);
+				lastStrideCount = slotMax;
+			}
+
+			llMessageLinked(LINK_SET, 35353, llDumpList2String(slots, "^"), NULL_KEY);
+
+			if(rezadjusters)
+			{
+				adjusters = [];
+				llMessageLinked(LINK_SET, 2, "RezAdjuster", "");
 			}
 
 			return;
@@ -624,7 +518,80 @@ default
 			llMessageLinked(LINK_SET, 1, (string)chatchannel, NULL_KEY);
 			lastPrimCount = curPrimCount;
 			curPrimCount = llGetNumberOfPrims();
-			assignSlots();
+			key thisKey = llGetLinkKey(llGetNumberOfPrims());
+
+			if((curPrimCount < lastPrimCount) || !(ZERO_VECTOR != llGetAgentSize(thisKey)))
+			{
+				integer n = llGetListLength(slots) / 8;
+
+				while(n)
+				{
+					--n;
+
+					if(!sits(llList2Key(slots, 4 + 8 * (n))))
+					{
+						slots = llListReplaceList(slots, [""], n * 8 + 4, n * 8 + 4);
+					}
+				}
+
+				lastPrimCount = curPrimCount;
+				llMessageLinked(LINK_SET, 35353, llDumpList2String(slots, "^"), NULL_KEY);
+				return;
+			}
+
+			if(curPrimCount > lastPrimCount)
+			{
+				if((!~llListFindList(slots, [thisKey])))
+				{
+					integer primcount = llGetObjectPrimCount(llGetKey());
+					integer n = 1;
+
+					while(n <= primcount)
+					{
+						integer slotNum = (integer)llGetLinkName(n);
+
+						if((slotNum > 0) && (slotNum <= slotMax))
+						{
+							if(llAvatarOnLinkSitTarget(n) == thisKey)
+							{
+								if(llList2Key(slots, 4 + 8 * (slotNum - 1)) == "")
+								{
+									slots = llListReplaceList(slots, [thisKey], (slotNum - 1) * 8 + 4, (slotNum - 1) * 8 + 4);
+								}
+							}
+						}
+
+						++n;
+					}
+				}
+
+				if((!~llListFindList(slots, [thisKey])))
+				{
+					integer freeslot;
+					freeslot = 0;
+
+					while((freeslot < slotMax) && (llList2String(slots, freeslot * 8 + 4) != ""))
+					{
+						++freeslot;
+					}
+
+					freeslot = freeslot * ((freeslot != slotMax) - (freeslot == slotMax)) - !slotMax;
+
+					if(freeslot >= 0)
+					{
+						slots = llListReplaceList(slots, [thisKey], freeslot * 8 + 4, freeslot * 8 + 4);
+					}
+					else
+					{
+						if(sits(thisKey))
+						{
+							llMessageLinked(LINK_SET, -222, (string)thisKey, NULL_KEY);
+						}
+					}
+				}
+
+				llMessageLinked(LINK_SET, 35353, llDumpList2String(slots, "^"), NULL_KEY);
+			}
 		}
 
 		if(change & CHANGED_INVENTORY)
