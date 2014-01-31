@@ -19,23 +19,21 @@
 // perms" will mean the most permissive possible set of permissions
 // allowed by the platform.
 // =repo-npose/core.i
-integer slotMax = 0;
-list slots;
+integer status;
+integer btnline;
+integer chatchannel;
 integer curPrimCount = 0;
 integer lastPrimCount = 0;
 integer lastStrideCount;
-integer rezadjusters;
 integer line;
-key dataid;
-key clicker;
-integer chatchannel;
-string card;
-integer btnline;
+integer slotMax = 0;
 key btnid;
-string btncard;
-list adjusters;
+key clicker;
+key dataid;
 key hudId;
-integer explicitFlag = 0;
+string btncard;
+string card;
+list slots;
 integer sits(key k)
 {
 	integer b;
@@ -82,14 +80,14 @@ ProcessLine(string line, key av)
 	{
 		if(slotMax < lastStrideCount)
 		{
-			slots = llListReplaceList(slots, [llList2String(params, 1), llList2Vector(params, 2),
-			                                  llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD), llList2Key(params, 4), llList2String(slots, (slotMax) * 8 + 4),
+			slots = llListReplaceList(slots, [llList2String(params, 1), ((vector)llList2String(params, 2)),
+			                                  llEuler2Rot((((vector)llList2String(params, 3))) * DEG_TO_RAD), llList2Key(params, 4), llList2String(slots, (slotMax) * 8 + 4),
 			                                  "", "", "seat" + (string)(slotMax + 1)], slotMax * 8, slotMax * 8 + 7);
 		}
 		else
 		{
-			slots += [llList2String(params, 1), llList2Vector(params, 2),
-			          llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD), llList2String(params, 4), "", "", "", "seat" + (string)(slotMax + 1)];
+			slots += [llList2String(params, 1), ((vector)llList2String(params, 2)),
+			          llEuler2Rot((((vector)llList2String(params, 3))) * DEG_TO_RAD), llList2String(params, 4), "", "", "", "seat" + (string)(slotMax + 1)];
 		}
 
 		slotMax++;
@@ -98,20 +96,20 @@ ProcessLine(string line, key av)
 
 	if("SINGLE" == action)
 	{
-		integer posIndex = llListFindList(slots, [llList2Vector(params, 2)]);
+		integer posIndex = llListFindList(slots, [((vector)llList2String(params, 2))]);
 
 		if((posIndex == -1) || ((posIndex != -1) && llList2String(slots, posIndex - 1) != llList2String(params, 1)))
 		{
 			integer slotindex = llListFindList(slots, [clicker]) - 4;
-			slots = llListReplaceList(slots, [llList2String(params, 1), llList2Vector(params, 2),
-			                                  llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD), llList2String(params, 4),
+			slots = llListReplaceList(slots, [llList2String(params, 1), ((vector)llList2String(params, 2)),
+			                                  llEuler2Rot((((vector)llList2String(params, 3))) * DEG_TO_RAD), llList2String(params, 4),
 			                                  llList2Key(slots,
 			                                          slotindex + 4), "", "", llList2String(slots, slotindex + 7)], slotindex, slotindex + 7);
 			integer newmax = (slotindex + 7 + 8 - 7) / 8;
 
 			if(newmax > slotMax)
 			{
-				llOwnerSay(llDumpList2String(["(", (61440 - llGetUsedMemory()) >> 10, "kB ) ~>", "slot gap:", newmax - slotMax, "slots", "{", "src/core.lsl", ":", 330, "}"], " "));
+				llOwnerSay(llDumpList2String(["(", (61440 - llGetUsedMemory()) >> 10, "kB ) ~>", "slot gap:", newmax - slotMax, "slots", "{", "src/core.lsl", ":", 317, "}"], " "));
 				slotMax = newmax;
 				lastStrideCount = slotMax;
 			}
@@ -134,18 +132,11 @@ ProcessLine(string line, key av)
 			}
 			else
 			{
-				if(llList2String(params, 4) == "explicit")
-				{
-					explicitFlag = 1;
-				}
-				else
-				{
-					explicitFlag = 0;
-				}
-
-				vector vDelta = llList2Vector(params, 2);
+				integer expl = (llList2String(params, 4) == "explicit");
+				(status += 2 * (!(status & 2)) * !!(expl) - 2 * (!!(status & 2)) * !(expl));
+				vector vDelta = ((vector)llList2String(params, 2));
 				vector pos = llGetPos() + (vDelta * llGetRot());
-				rotation rot = llEuler2Rot((llList2Vector(params, 3)) * DEG_TO_RAD) * llGetRot();
+				rotation rot = llEuler2Rot((((vector)llList2String(params, 3))) * DEG_TO_RAD) * llGetRot();
 
 				if(llVecMag(vDelta) > 9.9)
 				{
@@ -155,7 +146,7 @@ ProcessLine(string line, key av)
 				}
 				else
 				{
-					llRezAtRoot(obj, llGetPos() + (llList2Vector(params, 2) * llGetRot()), ZERO_VECTOR, rot, chatchannel);
+					llRezAtRoot(obj, llGetPos() + (((vector)llList2String(params, 2)) * llGetRot()), ZERO_VECTOR, rot, chatchannel);
 				}
 			}
 		}
@@ -202,7 +193,7 @@ default
 {
 	state_entry()
 	{
-		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-b4d2d862bf0a540cb0777ec56b445abf58fdd735");
+		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-b4470b48647ccbac8389daddf5a4863867e8d218 2014-01-31 07:37:38");
 		integer n = llGetObjectPrimCount(llGetKey());
 
 		if(!(n))
@@ -220,7 +211,7 @@ default
 		llMessageLinked(LINK_SET, 1, (string)chatchannel, NULL_KEY);
 		curPrimCount = llGetNumberOfPrims();
 		lastPrimCount = curPrimCount;
-		llListen(chatchannel, "", "", "");
+		llListen(chatchannel, "", NULL_KEY, "");
 		card = "";
 		integer stop = llGetInventoryNumber(INVENTORY_NOTECARD);
 
@@ -252,7 +243,6 @@ default
 			slotMax = 0;
 			llRegionSay(chatchannel, "die");
 			llRegionSay(chatchannel, "adjuster_die");
-			adjusters = [];
 			line = 0;
 
 			if(llGetInventoryKey(card))
@@ -274,15 +264,13 @@ default
 
 		if(num == 201)
 		{
-			adjusters = [];
-			rezadjusters = TRUE;
+			(status += 1 * !(status & 1));
 			return;
 		}
 
 		if(num == 205)
 		{
-			adjusters = [];
-			rezadjusters = FALSE;
+			(status -= 1 * (!!(status & 1)));
 			return;
 		}
 
@@ -335,8 +323,8 @@ default
 
 			for(slotNum = 0; slotNum < listStop; ++slotNum)
 			{
-				slots = llListReplaceList(slots, [llList2String(tempList, slotNum * 8), llList2Vector(tempList, slotNum * 8 + 1),
-				                                  llList2Rot(tempList, slotNum * 8 + 2), llList2String(tempList, slotNum * 8 + 3),
+				slots = llListReplaceList(slots, [llList2String(tempList, slotNum * 8), ((vector)llList2String(tempList, slotNum * 8 + 1)),
+				                                  ((rotation)llList2String(tempList, slotNum * 8 + 2)), llList2String(tempList, slotNum * 8 + 3),
 				                                  llList2Key(tempList, slotNum * 8 + 4), llList2String(tempList, slotNum * 8 + 5),
 				                                  llList2String(tempList, slotNum * 8 + 6), llList2String(tempList, slotNum * 8 + 7)], slotNum * 8, slotNum * 8 + 7);
 			}
@@ -368,12 +356,6 @@ default
 	}
 	object_rez(key id)
 	{
-		if(llKey2Name(id) == "Adjuster")
-		{
-			adjusters += [id];
-			return;
-		}
-
 		if(llKey2Name(id) == "npose admin hud")
 		{
 			hudId = id;
@@ -414,7 +396,7 @@ default
 		{
 			if($_0)
 			{
-				llRegionSay(chatchannel, "pong|" + (string)explicitFlag + "|" + (string)llGetPos());
+				llRegionSay(chatchannel, "pong|" + (string)(!!(status & 2)) + "|" + (string)llGetPos());
 				return;
 			}
 
@@ -426,9 +408,9 @@ default
 			}
 
 			list params = llParseString2List(message, ["|"], []);
-			vector newpos = llList2Vector(params, 0) - llGetPos();
+			vector newpos = ((vector)llList2String(params, 0)) - llGetPos();
 			newpos /= llGetRot();
-			rotation newrot = llList2Rot(params, 1) / llGetRot();
+			rotation newrot = ((rotation)llList2String(params, 1)) / llGetRot();
 			string $_ = "\nPROP|" + name + "|" + (string)newpos + "|" + (string)(llRot2Euler(newrot) * RAD_TO_DEG) + "|" + llList2String(params, 2);
 			llRegionSayTo(llGetOwner(), 0, $_);
 			llMessageLinked(LINK_SET, 34333, $_, NULL_KEY);
@@ -495,9 +477,8 @@ default
 
 			llMessageLinked(LINK_SET, 35353, llDumpList2String(slots, "^"), NULL_KEY);
 
-			if(rezadjusters)
+			if((!!(status & 1)))
 			{
-				adjusters = [];
 				llMessageLinked(LINK_SET, 2, "RezAdjuster", "");
 			}
 
