@@ -212,7 +212,7 @@ default
 {
 	event state_entry()
 	{
-		afootell(VERSION);
+		afootell(concat(concat(llGetScriptName(), " "), VERSION));
 
 		DEBUG_TellMemory("entry");
 

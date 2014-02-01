@@ -1,20 +1,31 @@
+// The nPose scripts are licensed under the GPLv2
+// (http://www.gnu.org/licenses/gpl-2.0.txt), with the following
+// addendum:
+//
+// The nPose scripts are free to be copied, modified, and
+// redistributed, subject to the following conditions:
+//
+//    - If you distribute the nPose scripts, you must leave them full
+//      perms.
+//
+//    - If you modify the nPose scripts and distribute the
+//      modifications, you must also make your modifications full
+//      perms.
+//
+// "Full perms" means having the modify, copy, and transfer
+// permissions enabled in Second Life and/or other virtual world
+// platforms derived from Second Life (such as OpenSim).  If the
+// platform should allow more fine-grained permissions, then "full
+// perms" will mean the most permissive possible set of permissions
+// allowed by the platform.
 
 
 #define DEBUG0 0
 
 #include <lslstddef.h>
+#include <avn/menu-vic.h>
 
 
-
-/*
-The nPose scripts are licensed under the GPLv2 (http://www.gnu.org/licenses/gpl-2.0.txt), with the following addendum:
-
-The nPose scripts are free to be copied, modified, and redistributed, subject to the following conditions:
-    - If you distribute the nPose scripts, you must leave them full perms.
-    - If you modify the nPose scripts and distribute the modifications, you must also make your modifications full perms.
-
-"Full perms" means having the modify, copy, and transfer permissions enabled in Second Life and/or other virtual world platforms derived from Second Life (such as OpenSim).  If the platform should allow more fine-grained permissions, then "full perms" will mean the most permissive possible set of permissions allowed by the platform.
-*/
 
 //default options settings.  Change these to suit personal preferences
 list Permissions = ["Public"]; //default permit option [Pubic, Locked, Group]
@@ -321,6 +332,8 @@ default
 	{
 		state_entry()
 		{
+			afootell(concat(concat(llGetScriptName(), " "), VERSION));
+
 			cmdname = (string)llGetKey();//don't really know why the relay uses this name param, but at least this ensures uniqueness for rlv
 			BuildMenus();
 		}
@@ -335,229 +348,229 @@ default
 		}
 
 		link_message(integer sender, integer num, string str, key id)
-			{
-				if(num == DIALOG_RESPONSE)   //response from menu
+		{
+			if(num == DIALOG_RESPONSE)   //response from menu
+				{
+					integer index = llListFindList(dialogids, [id]); //find the id in dialogids
+
+					unless(~index)
 					{
-						integer index = llListFindList(dialogids, [id]); //find the id in dialogids
+						return;
+					}
 
-						unless(~index)
-							{
-								return;
-							}
+					//we found the toucher in dialogids
 
-						//we found the toucher in dialogids
+					list params = llParseString2List(str, ["|"], []);  //parse the message
+					integer page = (integer)llList2String(params, 0);  //get the page number
+					string selection = llList2String(params, 1);  //get the button that was pressed from str
+					path = llList2String(dialogids, index + 2); //get the path from dialogids
+					toucherid = llList2Key(dialogids, index + 1);
 
-						list params = llParseString2List(str, ["|"], []);  //parse the message
-						integer page = (integer)llList2String(params, 0);  //get the page number
-						string selection = llList2String(params, 1);  //get the button that was pressed from str
-						path = llList2String(dialogids, index + 2); //get the path from dialogids
-						toucherid = llList2Key(dialogids, index + 1);
+					if(selection == BACKBTN)
+						{
+							//handle the back button. admin menu gets handled differently cause buttons are custom
+							list pathparts = llParseString2List(path, [":"], []);
+							pathparts = llDeleteSubList(pathparts, -1, -1);
 
-						if(selection == BACKBTN)
-							{
-								//handle the back button. admin menu gets handled differently cause buttons are custom
-								list pathparts = llParseString2List(path, [":"], []);
-								pathparts = llDeleteSubList(pathparts, -1, -1);
-
-								if(llList2String(pathparts, -1) == ADMINBTN)
+							if(llList2String(pathparts, -1) == ADMINBTN)
+								{
+									AdminMenu(toucherid, llDumpList2String(pathparts, ":"), "", adminbuttons);
+									/*                    }else if (llList2String(pathparts, -1) == OPTIONS){
+											      string optionsPrompt =  "Permit currently set to "+ llList2String(Permissions, 0)
+											      + "\nMenuOnSit currently set to "+ curmenuonsit + "\nsit2GetMenu currently set to " + menuReqSit
+											      + "\n2default currently set to "+ cur2default + "\nFacialEnable currently set to "+ Facials;
+											      AdminMenu(toucherid, llDumpList2String(pathparts, ":"), optionsPrompt, options);*/
+								}
+							else
+								if(llGetListLength(pathparts) <= 1)
 									{
-										AdminMenu(toucherid, llDumpList2String(pathparts, ":"), "", adminbuttons);
-										/*                    }else if (llList2String(pathparts, -1) == OPTIONS){
-												      string optionsPrompt =  "Permit currently set to "+ llList2String(Permissions, 0)
-												      + "\nMenuOnSit currently set to "+ curmenuonsit + "\nsit2GetMenu currently set to " + menuReqSit
-												      + "\n2default currently set to "+ cur2default + "\nFacialEnable currently set to "+ Facials;
-												      AdminMenu(toucherid, llDumpList2String(pathparts, ":"), optionsPrompt, options);*/
+										DoMenu(toucherid, ROOTMENU, "", 0);
 									}
 								else
-									if(llGetListLength(pathparts) <= 1)
+									{
+										DoMenu(toucherid, llDumpList2String(pathparts, ":"), "", 0);
+									}
+
+							return;
+						}
+
+					if(selection == ADMINBTN)
+						{
+							path += ":" + selection;
+							AdminMenu(toucherid, path, "", adminbuttons);
+
+							return;
+						}
+
+					if(selection == SLOTBTN)
+						{
+							//someone wants to change sit positionss.
+							//taking a place where someone already has that slot should do the swap regardless of how many
+							//places are open
+							path = path + ":" + selection;
+							AdminMenu(toucherid, path,  "Where will you sit?", slotbuttons);
+
+							return;
+						}
+
+					if(selection == OFFSETBTN)
+						{
+							//give offset menu
+							path = path + ":" + selection;
+							AdminMenu(toucherid, path,   "Adjust by " + (string)currentOffsetDelta
+								  + "m, or choose another distance.", offsetbuttons);
+
+							return;
+						}
+
+					if(selection == ADJUSTBTN)
+						{
+							llMessageLinked(LINK_SET, ADJUST, "", "");
+							AdminMenu(toucherid, path, "", adminbuttons);
+
+							return;
+						}
+
+					if(selection == STOPADJUSTBTN)
+						{
+							llMessageLinked(LINK_SET, STOPADJUST, "", "");
+							AdminMenu(toucherid, path, "", adminbuttons);
+
+							return;
+						}
+
+					if(selection == POSDUMPBTN)
+						{
+							llMessageLinked(LINK_SET, DUMP, "", "");
+							AdminMenu(toucherid, path, "", adminbuttons);
+
+							return;
+						}
+
+					if(selection == UNSITBTN)
+						{
+							avs = SeatedAvs();
+							list buttons;
+							integer stop = llGetListLength(avs);
+							integer n;
+
+							for(n = 0; n < stop; n++)
+								{
+									buttons += [llGetSubString(llKey2Name((key)llList2String(avs, n)), 0, 20)];
+								}
+
+							if(llGetListLength(buttons) > 0)
+								{
+									path += ":" + selection;
+									AdminMenu(toucherid, path, "Pick an avatar to unsit", buttons);
+								}
+							else
+								{
+									AdminMenu(toucherid, path, "", adminbuttons);
+								}
+
+							return;
+						}
+
+					if(selection == OPTIONS)
+						{
+							path += ":" + selection;
+							string optionsPrompt =  "Permit currently set to " + llList2String(Permissions, 0)
+										+ "\nMenuOnSit currently set to " + curmenuonsit + "\nsit2GetMenu currently set to " + menuReqSit
+										+ "\n2default currently set to " + cur2default + "\nFacialEnable currently set to " + Facials
+										+ "\nUseRLVBaseRestrict currently set to " + RLVenabled;
+							AdminMenu(toucherid, path, optionsPrompt, options);
+
+							return;
+						}
+
+					if(~llListFindList(menus, [path + ":" + selection]))
+						{
+							path = path + ":" + selection;
+							DoMenu(toucherid, path, "", 0);
+
+							return;
+						}
+
+					if(llList2String(llParseString2List(path, [":"], []), -1) == SLOTBTN)  //change seats
+						{
+							if(llGetSubString(selection, 0, 3) == "seat") //clicker selected an open seat where menu is 'seat'+#
+								{
+									integer slot = (integer)llGetSubString(selection, 4, -1);
+
+									if(slot >= 0)
 										{
-											DoMenu(toucherid, ROOTMENU, "", 0);
+											llMessageLinked(LINK_SET, SWAPTO, (string)(slot), toucherid);
 										}
-									else
+								}
+							else   //clicker selected a name so get seat# from list
+								{
+									integer slot = llListFindList(slotbuttons, [selection]) + 1;
+
+									if(slot >= 0)
 										{
-											DoMenu(toucherid, llDumpList2String(pathparts, ":"), "", 0);
+											llMessageLinked(LINK_SET, SWAPTO, (string)(slot), toucherid);
 										}
+								}
 
-								return;
-							}
+							list pathparts = llParseString2List(path, [":"], []);
+							pathparts = llDeleteSubList(pathparts, -1, -1);
+							path = llDumpList2String(pathparts, ":");
+							DoMenu(toucherid, path,  "", 0);
 
-						if(selection == ADMINBTN)
-							{
-								path += ":" + selection;
-								AdminMenu(toucherid, path, "", adminbuttons);
+							return;
+						}
 
-								return;
-							}
+					if(llList2String(llParseString2List(path, [":"], []), -1) == UNSITBTN)
+						{
+							integer stop = llGetListLength(avs);
+							integer n;
 
-						if(selection == SLOTBTN)
-							{
-								//someone wants to change sit positionss.
-								//taking a place where someone already has that slot should do the swap regardless of how many
-								//places are open
-								path = path + ":" + selection;
-								AdminMenu(toucherid, path,  "Where will you sit?", slotbuttons);
+							for(n = 0; n < stop; n++)
+								{
+									key av = llList2Key(avs, n);
 
-								return;
-							}
+									if(llGetSubString(llKey2Name(av), 0, 20) == selection)
+										{
+											if(llListFindList(SeatedAvs(), [av]) != -1)   //just make sure the av is seated before doing this unsit
+												{
+													//letting the slave script do the unsit function so link message out the command to unsit
+													llMessageLinked(LINK_SET, -222, (string)av, NULL_KEY);
+													integer avIndex = llListFindList(avs, [av]);
+													avs = llDeleteSubList(avs, index, index);
+													n = stop;
+												}
+										}
+								}
 
-						if(selection == OFFSETBTN)
-							{
-								//give offset menu
-								path = path + ":" + selection;
-								AdminMenu(toucherid, path,   "Adjust by " + (string)currentOffsetDelta
-									  + "m, or choose another distance.", offsetbuttons);
+							list buttons = [];
+							stop = llGetListLength(avs);
 
-								return;
-							}
+							for(n = 0; n < stop; n++)
+								{
+									buttons += [llGetSubString(llKey2Name((key)llList2String(avs, n)), 0, 20)];
+								}
 
-						if(selection == ADJUSTBTN)
-							{
-								llMessageLinked(LINK_SET, ADJUST, "", "");
-								AdminMenu(toucherid, path, "", adminbuttons);
+							if(llGetListLength(buttons) > 0)
+								{
+									AdminMenu(toucherid, path, "Pick an avatar to unsit", buttons);
+								}
+							else
+								{
+									list pathParts = llParseString2List(path, [":"], []);
+									pathParts = llDeleteSubList(pathParts, -1, -1);
+									AdminMenu(toucherid, llDumpList2String(pathParts, ":"), "", adminbuttons);
+								}
 
-								return;
-							}
+							return;
+						}
 
-						if(selection == STOPADJUSTBTN)
-							{
-								llMessageLinked(LINK_SET, STOPADJUST, "", "");
-								AdminMenu(toucherid, path, "", adminbuttons);
+					if(llList2String(llParseString2List(path, [":"], []), -1) == OFFSETBTN)
+						{
 
-								return;
-							}
-
-						if(selection == POSDUMPBTN)
-							{
-								llMessageLinked(LINK_SET, DUMP, "", "");
-								AdminMenu(toucherid, path, "", adminbuttons);
-
-								return;
-							}
-
-						if(selection == UNSITBTN)
-							{
-								avs = SeatedAvs();
-								list buttons;
-								integer stop = llGetListLength(avs);
-								integer n;
-
-								for(n = 0; n < stop; n++)
-									{
-										buttons += [llGetSubString(llKey2Name((key)llList2String(avs, n)), 0, 20)];
-									}
-
-								if(llGetListLength(buttons) > 0)
-									{
-										path += ":" + selection;
-										AdminMenu(toucherid, path, "Pick an avatar to unsit", buttons);
-									}
-								else
-									{
-										AdminMenu(toucherid, path, "", adminbuttons);
-									}
-
-								return;
-							}
-
-						if(selection == OPTIONS)
-							{
-								path += ":" + selection;
-								string optionsPrompt =  "Permit currently set to " + llList2String(Permissions, 0)
-									+ "\nMenuOnSit currently set to " + curmenuonsit + "\nsit2GetMenu currently set to " + menuReqSit
-									+ "\n2default currently set to " + cur2default + "\nFacialEnable currently set to " + Facials
-									+ "\nUseRLVBaseRestrict currently set to " + RLVenabled;
-								AdminMenu(toucherid, path, optionsPrompt, options);
-
-								return;
-							}
-
-						if(~llListFindList(menus, [path + ":" + selection]))
-							{
-								path = path + ":" + selection;
-								DoMenu(toucherid, path, "", 0);
-
-								return;
-							}
-
-						if(llList2String(llParseString2List(path, [":"], []), -1) == SLOTBTN)  //change seats
-							{
-								if(llGetSubString(selection, 0, 3) == "seat") //clicker selected an open seat where menu is 'seat'+#
-									{
-										integer slot = (integer)llGetSubString(selection, 4, -1);
-
-										if(slot >= 0)
-											{
-												llMessageLinked(LINK_SET, SWAPTO, (string)(slot), toucherid);
-											}
-									}
-								else   //clicker selected a name so get seat# from list
-									{
-										integer slot = llListFindList(slotbuttons, [selection]) + 1;
-
-										if(slot >= 0)
-											{
-												llMessageLinked(LINK_SET, SWAPTO, (string)(slot), toucherid);
-											}
-									}
-
-								list pathparts = llParseString2List(path, [":"], []);
-								pathparts = llDeleteSubList(pathparts, -1, -1);
-								path = llDumpList2String(pathparts, ":");
-								DoMenu(toucherid, path,  "", 0);
-
-								return;
-							}
-
-						if(llList2String(llParseString2List(path, [":"], []), -1) == UNSITBTN)
-							{
-								integer stop = llGetListLength(avs);
-								integer n;
-
-								for(n = 0; n < stop; n++)
-									{
-										key av = llList2Key(avs, n);
-
-										if(llGetSubString(llKey2Name(av), 0, 20) == selection)
-											{
-												if(llListFindList(SeatedAvs(), [av]) != -1)   //just make sure the av is seated before doing this unsit
-													{
-														//letting the slave script do the unsit function so link message out the command to unsit
-														llMessageLinked(LINK_SET, -222, (string)av, NULL_KEY);
-														integer avIndex = llListFindList(avs, [av]);
-														avs = llDeleteSubList(avs, index, index);
-														n = stop;
-													}
-											}
-									}
-
-								list buttons = [];
-								stop = llGetListLength(avs);
-
-								for(n = 0; n < stop; n++)
-									{
-										buttons += [llGetSubString(llKey2Name((key)llList2String(avs, n)), 0, 20)];
-									}
-
-								if(llGetListLength(buttons) > 0)
-									{
-										AdminMenu(toucherid, path, "Pick an avatar to unsit", buttons);
-									}
-								else
-									{
-										list pathParts = llParseString2List(path, [":"], []);
-										pathParts = llDeleteSubList(pathParts, -1, -1);
-										AdminMenu(toucherid, llDumpList2String(pathParts, ":"), "", adminbuttons);
-									}
-
-								return;
-							}
-
-						if(llList2String(llParseString2List(path, [":"], []), -1) == OFFSETBTN)
-							{
-
-								// replacing convoluted code --- this can be simplyfied if it is
-								// acceptable that either the ZEROBTN or an undefined(?) button take
-								// precendence over the adjustment buttons
+							// replacing convoluted code --- this can be simplyfied if it is
+							// acceptable that either the ZEROBTN or an undefined(?) button take
+							// precendence over the adjustment buttons
 
 #define forward                    (float)(selection ==   FWDBTN)
 #define backward                   (float)(selection ==  BKWDBTN)
@@ -566,8 +579,8 @@ default
 #define up                         (float)(selection ==    UPBTN)
 #define down                       (float)(selection ==  DOWNBTN)
 
-								vector buttons_pos = <forward, left, up>;
-								vector buttons_neg = <backward, right, down>;
+							vector buttons_pos = <forward, left, up>;
+							vector buttons_neg = <backward, right, down>;
 
 #undef forward
 #undef backward
@@ -576,294 +589,296 @@ default
 #undef up
 #undef down
 
-								// I´m feeling funny
-								//
-								if((llVecMag(buttons_pos) > 1.0) || (llVecMag(buttons_neg) > 1.0))
-									{
-										// this probably never happens and the check can be removed
-										//
-										ERRORmsg("multiple buttons selected:", buttons_pos, buttons_neg);
-									}
+							// I´m feeling funny
+							//
+							if((llVecMag(buttons_pos) > 1.0) || (llVecMag(buttons_neg) > 1.0))
+								{
+									// this probably never happens and the check can be removed
+									//
+									ERRORmsg("multiple buttons selected:", buttons_pos, buttons_neg);
+								}
 
-								vector adjust = buttons_pos - buttons_neg;
-								if(adjust)
-									{
-										virtualAdjustOffsetDirection(toucherid, adjust);
-									}
-								else
-									{
-										if(selection ==  ZEROBTN)
-											{
-												llMessageLinked(LINK_SET, SETOFFSET, (string)ZERO_VECTOR, toucherid);
-											}
-										else
-											{
-												currentOffsetDelta = (float)selection;
-											}
-									}
+							vector adjust = buttons_pos - buttons_neg;
+
+							if(adjust)
+								{
+									virtualAdjustOffsetDirection(toucherid, adjust);
+								}
+							else
+								{
+									if(selection ==  ZEROBTN)
+										{
+											llMessageLinked(LINK_SET, SETOFFSET, (string)ZERO_VECTOR, toucherid);
+										}
+									else
+										{
+											currentOffsetDelta = (float)selection;
+										}
+								}
 
 
-								AdminMenu(toucherid, path,  sprintl("Adjust by", currentOffsetDelta, "m, or choose another distance."), offsetbuttons);
-								return;
+							AdminMenu(toucherid, path,  sprintl("Adjust by", currentOffsetDelta, "m, or choose another distance."), offsetbuttons);
+							return;
 
 
 #if 0
-								// this convoluted code is disabled and kept for reference
-								// it should be removed when the replacement is working
-								//
-								if(selection ==   FWDBTN)
-									{
-										AdjustOffsetDirection(toucherid, <1.0, 0.0, 0.0>);
-									}
-								else
-									if(selection ==  BKWDBTN)
-										{
-											AdjustOffsetDirection(toucherid, <-1.0, 0.0, 0.0>);
-										}
-									else
-										if(selection ==  LEFTBTN)
-											{
-												AdjustOffsetDirection(toucherid, <0.0, 1.0, 0.0>);
-											}
-										else
-											if(selection == RIGHTBTN)
-												{
-													AdjustOffsetDirection(toucherid, <0.0, -1.0, 0.0>);
-												}
-											else
-												if(selection ==    UPBTN)
-													{
-														AdjustOffsetDirection(toucherid, <0.0, 0.0, 1.0>);
-													}
-												else
-													if(selection ==  DOWNBTN)
-														{
-															AdjustOffsetDirection(toucherid, <0.0, 0.0, -1.0>);
-														}
-													else
-														if(selection ==  ZEROBTN)
-															{
-																llMessageLinked(LINK_SET, SETOFFSET, (string)ZERO_VECTOR, toucherid);
-															}
-														else
-															{
-																currentOffsetDelta = (float)selection;
-															}
 
-								AdminMenu(toucherid, path,  "Adjust by " + (string)currentOffsetDelta
-									  + "m, or choose another distance.", offsetbuttons);
-
-								return;
-#endif
-							}
-
-						if(selection == SYNCBTN)
-							{
-								llMessageLinked(LINK_SET, SYNC, "", "");
-								DoMenu(toucherid, path, "", page);
-
-								return;
-							}
-
-
-						list pathlist = llDeleteSubList(llParseStringKeepNulls(path, [":"], []), 0, 0);
-						integer permission = llListFindList(menuPerm, [selection]);
-						string defaultname = llDumpList2String([defaultprefix] + pathlist + [selection], ":");
-						string setname = llDumpList2String([setprefix] + pathlist + [selection], ":");
-						string btnname = llDumpList2String([btnprefix] + pathlist + [selection], ":");
-
-						//correct the notecard name so the core can find this notecard
-						if(permission != -1)
-							{
-								if(llList2String(menuPerm, permission + 1) != "public")
-									{
-										defaultname += "{" + llList2String(menuPerm, permission + 1) + "}";
-										setname += "{" + llList2String(menuPerm, permission + 1) + "}";
-										btnname += "{" + llList2String(menuPerm, permission + 1) + "}";
-									}
-							}
-
-						if(llGetInventoryType(defaultname) == INVENTORY_NOTECARD)
-							{
-								llMessageLinked(LINK_SET, DOPOSE, defaultname, toucherid);
-							}
-						else
-							if(llGetInventoryType(setname) == INVENTORY_NOTECARD)
+							// this convoluted code is disabled and kept for reference
+							// it should be removed when the replacement is working
+							//
+							if(selection ==   FWDBTN)
 								{
-									llMessageLinked(LINK_SET, DOPOSE, setname, toucherid);
+									AdjustOffsetDirection(toucherid, <1.0, 0.0, 0.0>);
 								}
 							else
-								if(llGetInventoryType(btnname) == INVENTORY_NOTECARD)
+								if(selection ==  BKWDBTN)
 									{
-										llMessageLinked(LINK_SET, DOBUTTON, btnname, toucherid);
+										AdjustOffsetDirection(toucherid, < -1.0, 0.0, 0.0 >);
 									}
+								else
+									if(selection ==  LEFTBTN)
+										{
+											AdjustOffsetDirection(toucherid, <0.0, 1.0, 0.0>);
+										}
+									else
+										if(selection == RIGHTBTN)
+											{
+												AdjustOffsetDirection(toucherid, < 0.0, -1.0, 0.0 >);
+											}
+										else
+											if(selection ==    UPBTN)
+												{
+													AdjustOffsetDirection(toucherid, <0.0, 0.0, 1.0>);
+												}
+											else
+												if(selection ==  DOWNBTN)
+													{
+														AdjustOffsetDirection(toucherid, < 0.0, 0.0, -1.0 >);
+													}
+												else
+													if(selection ==  ZEROBTN)
+														{
+															llMessageLinked(LINK_SET, SETOFFSET, (string)ZERO_VECTOR, toucherid);
+														}
+													else
+														{
+															currentOffsetDelta = (float)selection;
+														}
 
-						if(llGetSubString(selection, -1, -1) == "-") //don't remenu
+							AdminMenu(toucherid, path,  "Adjust by " + (string)currentOffsetDelta
+								  + "m, or choose another distance.", offsetbuttons);
+
+							return;
+#endif
+						}
+
+					if(selection == SYNCBTN)
+						{
+							llMessageLinked(LINK_SET, SYNC, "", "");
+							DoMenu(toucherid, path, "", page);
+
+							return;
+						}
+
+
+					list pathlist = llDeleteSubList(llParseStringKeepNulls(path, [":"], []), 0, 0);
+					integer permission = llListFindList(menuPerm, [selection]);
+					string defaultname = llDumpList2String([defaultprefix] + pathlist + [selection], ":");
+					string setname = llDumpList2String([setprefix] + pathlist + [selection], ":");
+					string btnname = llDumpList2String([btnprefix] + pathlist + [selection], ":");
+
+					//correct the notecard name so the core can find this notecard
+					if(permission != -1)
+						{
+							if(llList2String(menuPerm, permission + 1) != "public")
+								{
+									defaultname += "{" + llList2String(menuPerm, permission + 1) + "}";
+									setname += "{" + llList2String(menuPerm, permission + 1) + "}";
+									btnname += "{" + llList2String(menuPerm, permission + 1) + "}";
+								}
+						}
+
+					if(llGetInventoryType(defaultname) == INVENTORY_NOTECARD)
+						{
+							llMessageLinked(LINK_SET, DOPOSE, defaultname, toucherid);
+						}
+					else
+						if(llGetInventoryType(setname) == INVENTORY_NOTECARD)
 							{
-								llMessageLinked(LINK_SET, -802, path, toucherid);
+								llMessageLinked(LINK_SET, DOPOSE, setname, toucherid);
 							}
 						else
-							{
-								DoMenu(toucherid, path, "", page);
-							}
+							if(llGetInventoryType(btnname) == INVENTORY_NOTECARD)
+								{
+									llMessageLinked(LINK_SET, DOBUTTON, btnname, toucherid);
+								}
+
+					if(llGetSubString(selection, -1, -1) == "-") //don't remenu
+						{
+							llMessageLinked(LINK_SET, -802, path, toucherid);
+						}
+					else
+						{
+							DoMenu(toucherid, path, "", page);
+						}
 
 
-						return;
-					}
+					return;
+				}
 
-				if(num == DIALOG_TIMEOUT)  //menu not clicked and dialog timed out
-					{
-						integer index = llListFindList(dialogids, [id]);
+			if(num == DIALOG_TIMEOUT)  //menu not clicked and dialog timed out
+				{
+					integer index = llListFindList(dialogids, [id]);
 
-						if(index != -1)
-							{
-								dialogids = llDeleteSubList(dialogids, index, index + 2);
-							}
+					if(index != -1)
+						{
+							dialogids = llDeleteSubList(dialogids, index, index + 2);
+						}
 
-						if(cur2default == "on" && llGetListLength(SeatedAvs()) < 1)
-							{
-								llMessageLinked(LINK_SET, DOPOSE, defaultPose, NULL_KEY);
-							}
+					if(cur2default == "on" && llGetListLength(SeatedAvs()) < 1)
+						{
+							llMessageLinked(LINK_SET, DOPOSE, defaultPose, NULL_KEY);
+						}
 
-						return;
-					}
+					return;
+				}
 
-				if(num == optionsNum)
-					{
-						list optionsToSet = llParseStringKeepNulls(str, ["~"], []);
-						integer stop = llGetListLength(optionsToSet);
-						integer n = 0;
+			if(num == optionsNum)
+				{
+					list optionsToSet = llParseStringKeepNulls(str, ["~"], []);
+					integer stop = llGetListLength(optionsToSet);
+					integer n = 0;
 
-						while(n < stop)
-							{
-								list optionsItems = llParseString2List(llList2String(optionsToSet, n), ["="], []);
-								string optionItem = llList2String(optionsItems, 0);
-								string optionSetting = llList2String(optionsItems, 1);
+					while(n < stop)
+						{
+							list optionsItems = llParseString2List(llList2String(optionsToSet, n), ["="], []);
+							string optionItem = llList2String(optionsItems, 0);
+							string optionSetting = llList2String(optionsItems, 1);
 
-								if(optionItem == "menuonsit")
-									{
-										curmenuonsit = optionSetting;
-										continue next_item;
-									}
+							if(optionItem == "menuonsit")
+								{
+									curmenuonsit = optionSetting;
+									continue next_item;
+								}
 
-								if(optionItem == "permit")
-									{
-										Permissions = [optionSetting];
-										continue next_item;
-									}
+							if(optionItem == "permit")
+								{
+									Permissions = [optionSetting];
+									continue next_item;
+								}
 
-								if(optionItem == "2default")
-									{
-										cur2default = optionSetting;
-										continue next_item;
-									}
+							if(optionItem == "2default")
+								{
+									cur2default = optionSetting;
+									continue next_item;
+								}
 
-								if(optionItem == "sit2getmenu")
-									{
-										menuReqSit = optionSetting;
-										continue next_item;
-									}
+							if(optionItem == "sit2getmenu")
+								{
+									menuReqSit = optionSetting;
+									continue next_item;
+								}
 
-								if(optionItem == "vicgetsmenu")
-									{
-										vicGetsMenu = optionSetting;
-										continue next_item;
-									}
+							if(optionItem == "vicgetsmenu")
+								{
+									vicGetsMenu = optionSetting;
+									continue next_item;
+								}
 
-								if(optionItem == "facialExp")
-									{
-										Facials = optionSetting;
-										llMessageLinked(LINK_SET, -241, Facials, NULL_KEY);
-										continue next_item;
-									}
+							if(optionItem == "facialExp")
+								{
+									Facials = optionSetting;
+									llMessageLinked(LINK_SET, -241, Facials, NULL_KEY);
+									continue next_item;
+								}
 
-								if(optionItem == "rlvbaser")
-									{
-										RLVenabled = optionSetting;
-										llMessageLinked(LINK_SET, -1812221819, "RLV=" + RLVenabled, NULL_KEY);
-										continue next_item;
-									}
+							if(optionItem == "rlvbaser")
+								{
+									RLVenabled = optionSetting;
+									llMessageLinked(LINK_SET, -1812221819, "RLV=" + RLVenabled, NULL_KEY);
+									continue next_item;
+								}
 
-								@next_item;
-								++n;
-							}
+							@next_item;
+							++n;
+						}
 
-						return;
-					}
+					return;
+				}
 
-				if(num == -888 && str == ADMINBTN)
-					{
-						path += ":" + str;
-						AdminMenu(toucherid, path, "", adminbuttons);
+			if(num == -888 && str == ADMINBTN)
+				{
+					path += ":" + str;
+					AdminMenu(toucherid, path, "", adminbuttons);
 
-						return;
-					}
+					return;
+				}
 
-				if(num == -888 && str == SLOTBTN)
-					{
-						//someone wants to change sit positionss.
-						//taking a place where someone already has that slot should do the swap regardless of how many
-						//places are open
-						path = path + ":" + str;
-						AdminMenu(toucherid, path,  "Where will you sit?", slotbuttons);
+			if(num == -888 && str == SLOTBTN)
+				{
+					//someone wants to change sit positionss.
+					//taking a place where someone already has that slot should do the swap regardless of how many
+					//places are open
+					path = path + ":" + str;
+					AdminMenu(toucherid, path,  "Where will you sit?", slotbuttons);
 
-						return;
-					}
+					return;
+				}
 
-				if(num == -888 && str == OFFSETBTN)
-					{
-						//give offset menu
-						path = path + ":" + str;
-						AdminMenu(toucherid, path,   "Adjust by " + (string)currentOffsetDelta
-							  + "m, or choose another distance.", offsetbuttons);
+			if(num == -888 && str == OFFSETBTN)
+				{
+					//give offset menu
+					path = path + ":" + str;
+					AdminMenu(toucherid, path,   "Adjust by " + (string)currentOffsetDelta
+						  + "m, or choose another distance.", offsetbuttons);
 
-						return;
-					}
+					return;
+				}
 
-				if(num == -888 && str == SYNCBTN)
-					{
-						llMessageLinked(LINK_SET, SYNC, "", "");
-						DoMenu(toucherid, path, "", 0);
+			if(num == -888 && str == SYNCBTN)
+				{
+					llMessageLinked(LINK_SET, SYNC, "", "");
+					DoMenu(toucherid, path, "", 0);
 
-						return;
-					}
+					return;
+				}
 
-				if(num == DOMENU)
-					{
-						toucherid = id;
-						DoMenu(toucherid, str, "", 0);
+			if(num == DOMENU)
+				{
+					toucherid = id;
+					DoMenu(toucherid, str, "", 0);
 
-						return;
-					}
+					return;
+				}
 
-				if(num == DOMENU_ACCESSCTRL)  //external call to check permissions
-					{
-						toucherid = id;
-						DoMenu_AccessCtrl(toucherid, ROOTMENU, "", 0);
+			if(num == DOMENU_ACCESSCTRL)  //external call to check permissions
+				{
+					toucherid = id;
+					DoMenu_AccessCtrl(toucherid, ROOTMENU, "", 0);
 
-						return;
-					}
+					return;
+				}
 
-				if(num == -238)
-					{
-						victims = llCSV2List(str);
+			if(num == -238)
+				{
+					victims = llCSV2List(str);
 
-						return;
-					}
+					return;
+				}
 
-				if(num == 35354)
-					{
-						slotbuttons = llParseString2List(str, [","], []);
+			if(num == 35354)
+				{
+					slotbuttons = llParseString2List(str, [","], []);
 
-						return;
-					}
+					return;
+				}
 
-				if(num == memusage)  //dump memory stats to local
-					{
-						llSay(0, "Memory Used by " + llGetScriptName() + ": " + (string)llGetUsedMemory() + " of " + (string)llGetMemoryLimit()
-						      + ",Leaving " + (string)llGetFreeMemory() + " memory free.");
-					}
-			}
+			if(num == memusage)  //dump memory stats to local
+				{
+					llSay(0, "Memory Used by " + llGetScriptName() + ": " + (string)llGetUsedMemory() + " of " + (string)llGetMemoryLimit()
+					      + ",Leaving " + (string)llGetFreeMemory() + " memory free.");
+				}
+		}
 
 		changed(integer change)
 		{
