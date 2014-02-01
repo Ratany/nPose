@@ -17,3 +17,6 @@
 #define DOACTIONS                  207
 #define CORERELAY                  300
 #define ADJUST                     201
+
+
+#define sSEAT                      "seat"

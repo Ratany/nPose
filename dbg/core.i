@@ -41,7 +41,7 @@ integer sits(key k)
 		integer $_ = llGetNumberOfPrims();
 		b = $_;
 
-		while($_ && !(b = !(llGetLinkKey($_) != k)) && (ZERO_VECTOR != llGetAgentSize(llGetLinkKey($_))))
+		while($_ && !(b = !(llGetLinkKey($_) != (k))) && (ZERO_VECTOR != llGetAgentSize(llGetLinkKey($_))))
 		{
 			--$_;
 		}
@@ -50,25 +50,20 @@ integer sits(key k)
 }
 SwapTwoSlots(integer currentseatnum, integer newseatnum)
 {
-	if(newseatnum <= slotMax)
-	{
-		integer OldSlot = llListFindList(slots, ["seat" + (string)currentseatnum]) / 8;
-		integer NewSlot = llListFindList(slots, ["seat" + (string)newseatnum]) / 8;
-		list curslot = llList2List(slots, NewSlot * 8, NewSlot * 8 + 3)
-		               + [llList2Key(slots, 4 + 8 * (OldSlot))]
-		               + llList2List(slots, NewSlot * 8 + 5, NewSlot * 8 + 7);
-		slots = llListReplaceList(slots, llList2List(slots, OldSlot * 8, OldSlot * 8 + 3)
-		                          + [llList2Key(slots, 4 + 8 * (NewSlot))]
-		                          + llList2List(slots, OldSlot * 8 + 5, OldSlot * 8 + 7), OldSlot * 8, (OldSlot + 1) * 8 - 1);
-		slots = llListReplaceList(slots, curslot, NewSlot * 8, (NewSlot + 1) * 8 - 1);
-	}
-	else
-	{
-		llRegionSayTo(llList2Key(slots, llListFindList(slots, ["seat" + (string)currentseatnum]) - 4),
-		              0, "Seat " + (string)newseatnum + " is not available for this pose set");
-	}
+	integer OldSlot = (llListFindList(slots, [("seat") + (string)(currentseatnum)]) / (8));
+	integer NewSlot = (llListFindList(slots, [("seat") + (string)(newseatnum)]) / (8));
 
-	llMessageLinked(LINK_SET, 35353, llDumpList2String(slots, "^"), NULL_KEY);
+	if((OldSlot != NewSlot) && !(((OldSlot) < 0) || ((OldSlot) > slotMax)) && !(((NewSlot) < 0) || ((NewSlot) > slotMax)))
+	{
+		key oldslotagent = llList2Key(slots, 4 + 8 * (OldSlot));
+		OldSlot *= 8;
+		OldSlot += 4;
+		slots = llListReplaceList(slots, [llList2Key(slots, 4 + 8 * (NewSlot))], OldSlot, OldSlot);
+		NewSlot *= 8;
+		NewSlot += 4;
+		slots = llListReplaceList(slots, [oldslotagent], NewSlot, NewSlot);
+		llMessageLinked(LINK_SET, 35353, llDumpList2String(slots, "^"), NULL_KEY);
+	}
 }
 ProcessLine(string line, key av)
 {
@@ -109,7 +104,7 @@ ProcessLine(string line, key av)
 
 			if(newmax > slotMax)
 			{
-				llOwnerSay(llDumpList2String(["(", (61440 - llGetUsedMemory()) >> 10, "kB ) ~>", "slot gap:", newmax - slotMax, "slots", "{", "src/core.lsl", ":", 317, "}"], " "));
+				llOwnerSay(llDumpList2String(["(", (61440 - llGetUsedMemory()) >> 10, "kB ) ~>", "slot gap:", newmax - slotMax, "slots", "{", "src/core.lsl", ":", 339, "}"], " "));
 				slotMax = newmax;
 				lastStrideCount = slotMax;
 			}
@@ -193,7 +188,7 @@ default
 {
 	state_entry()
 	{
-		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-b988e223f5d2fba7acd56034de032cdacf150e2c 2014-01-31 07:43:39");
+		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-91bb8e5d5137f7a3d4d8a5c843d6ad17cb3ab49f 2014-01-31 15:39:50");
 		integer n = llGetObjectPrimCount(llGetKey());
 
 		if(!(n))
@@ -289,7 +284,7 @@ default
 
 		if(num == 202)
 		{
-			if(llGetListLength(slots) / 8 >= 2)
+			if(!(2 < slotMax))
 			{
 				list seats2Swap = llParseString2List(str, [","], []);
 				SwapTwoSlots(llList2Integer(seats2Swap, 0), llList2Integer(seats2Swap, 1));
@@ -300,18 +295,13 @@ default
 
 		if(num == 210)
 		{
-			{
-				integer oldseat = (integer)llGetSubString(llList2String(slots, llListFindList(slots, [id]) + 3), 4, -1);
+			integer idx = llListFindList(slots, [(id)]) / (8);
 
-				if(oldseat <= 0)
-				{
-					llWhisper(0, "avatar is not assigned a slot: " + (string)id);
-				}
-				else
-				{
-					SwapTwoSlots(oldseat, (integer)str);
-				}
+			if(!((((idx) < 0) || ((idx) > slotMax))))
+			{
+				SwapTwoSlots(((integer)llGetSubString(llList2String(slots, 7 + 8 * (idx)), 4, -1)), ((integer)str));
 			}
+
 			return;
 		}
 
@@ -433,7 +423,7 @@ default
 				integer emptySlot;
 				emptySlot = 0;
 
-				while((emptySlot < slotMax) && (llList2String(slots, emptySlot * 8 + 4) != ""))
+				while((emptySlot < slotMax) && (llList2String(slots, emptySlot * (8) + 4) != ""))
 				{
 					++emptySlot;
 				}
@@ -459,7 +449,7 @@ default
 							slots = llListReplaceList(slots, [llList2Key(slots, x * 8 + 4)], emptySlot * 8 + 4, emptySlot * 8 + 4);
 							emptySlot = 0;
 
-							while((emptySlot < slotMax) && (llList2String(slots, emptySlot * 8 + 4) != ""))
+							while((emptySlot < slotMax) && (llList2String(slots, emptySlot * (8) + 4) != ""))
 							{
 								++emptySlot;
 							}
@@ -551,7 +541,7 @@ default
 					integer freeslot;
 					freeslot = 0;
 
-					while((freeslot < slotMax) && (llList2String(slots, freeslot * 8 + 4) != ""))
+					while((freeslot < slotMax) && (llList2String(slots, freeslot * (8) + 4) != ""))
 					{
 						++freeslot;
 					}

@@ -1,1 +1,0 @@
-../nPose/nPose SAT_NOTSAT handler .005.lsl

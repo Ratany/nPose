@@ -10,3 +10,8 @@
 // define this to use the function sits() instead of an inlined version
 //
 #define _OUTLINE_virtualboolIsSitting
+
+
+// inlines SwapTwoSlots()
+//
+// #define _INLINE_SwapTwoSlots
