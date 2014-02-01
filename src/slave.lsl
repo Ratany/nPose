@@ -35,6 +35,7 @@
 
 #include <constants.h>
 
+#include <sitting.h>
 
 
 int status = 0;
@@ -177,51 +178,32 @@ void doSeats(integer slotNum, key avKey)
 }
 
 
-list SeatedAvs()
-{
-	list avs;
-	integer linkcount = llGetNumberOfPrims();
-	integer n;
-
-	for(n = linkcount; n >= 0; n--)
-		{
-			key id = llGetLinkKey(n);
-
-			if(llGetAgentSize(id) != ZERO_VECTOR)
-				{
-					avs = [id] + avs;
-				}
-			else
-				{
-					return avs;
-				}
+// add a new stride when agent is not found in the list, otherwise
+// increase the offset in the list by given offset unless given offset
+// is ZERO_VECTOR, in which case the offset in the list is replaced
+// with ZERO_VECTOR
+//
+#define inlineSetAvatarOffset(avatar, offset)				\
+	integer avatarOffsetsIndex = LstIdx(avatarOffsets, avatar);	\
+									\
+	when(iIsUndetermined(avatarOffsetsIndex))			\
+	{								\
+		avatarOffsets += [avatar, offset];			\
+									\
+		nextAvatarOffset += 2;					\
+	}								\
+	else								\
+		{							\
+									\
+			if(offset)					\
+				{					\
+					offset += llList2Vector(avatarOffsets, avatarOffsetsIndex + 1);	\
+				}					\
+									\
+			avatarOffsets = llListReplaceList(avatarOffsets, [offset], avatarOffsetsIndex, avatarOffsetsIndex); \
 		}
+// can probably return rather than use else once concatenated if/elses are fixed
 
-	return [];
-}
-
-
-SetAvatarOffset(key avatar, vector offset)
-{
-	integer avatarOffsetsIndex = llListFindList(avatarOffsets, [avatar]);
-
-	if(offset == ZERO_VECTOR)
-		{
-			avatarOffsets = llListReplaceList(avatarOffsets, [avatar, offset], avatarOffsetsIndex, avatarOffsetsIndex + 1);
-		}
-
-	if(avatarOffsetsIndex < 0)
-		{
-			avatarOffsetsIndex = nextAvatarOffset;
-			nextAvatarOffset = (nextAvatarOffset + 2) % avatarOffsetsLength;
-		}
-	else
-		{
-			offset = llList2Vector(avatarOffsets, avatarOffsetsIndex + 1) + offset;
-		}
-
-	avatarOffsets = llListReplaceList(avatarOffsets, [avatar, offset], avatarOffsetsIndex, avatarOffsetsIndex + 1);
-}
 
 
 RezNextAdjuster()
@@ -262,7 +244,7 @@ default
 					key av;
 					list tempList = llParseString2List(str, ["/"], []);
 
-					if(llListFindList(SeatedAvs(), [(key)llList2String(tempList, 0)]) != -1)
+					if(sits(llList2Key(tempList, 0)))
 						{
 							av = (key)llList2String(tempList, 0);
 						}
@@ -352,18 +334,13 @@ default
 					//            llSay(0, "anim list:\n" + llList2CSV(llGetAnimationList(av)));
 				}
 			else
-				if(num == ADJUSTOFFSET)
+				if((num == ADJUSTOFFSET) || (num == SETOFFSET))
 					{
-						SetAvatarOffset(id, (vector)str);
+						vector $_ = (vector)str;
+						inlineSetAvatarOffset(id, $_);
 						llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
 					}
 				else
-					if(num == SETOFFSET)
-						{
-							SetAvatarOffset(id, (vector)str);
-							llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
-						}
-					else
 						if(num == -241)
 							{
 								facialEnable = str;
@@ -440,7 +417,7 @@ default
 										{
 											if(llList2Key(slots, seatcount * 8 + 4) != "")
 												{
-													if(llListFindList(SeatedAvs(), [llList2Key(slots, seatcount * 8 + 4)]) != -1)
+													if(sits(llList2Key(slots, seatcount * 8 + 4)))
 														{
 															UnStatus(stDOSYNC);
 															doSeats(seatcount, llList2String(slots, (seatcount) * 8 + 4));
@@ -586,14 +563,14 @@ default
 
 					if(avIndex != -1)
 						{
-							if(llListFindList(SeatedAvs(), [thisAV]) != -1)
+							if(sits(thisAV))
 								{
 									llStartAnimation(currentanim);
 								}
 						}
 				}
 				else
-					if(llListFindList(SeatedAvs(), [thisAV]) != -1)
+					if(sits(thisAV))
 						{
 							llStopAnimation(currentanim);
 							llStartAnimation("sit");
@@ -656,7 +633,7 @@ default
 											faceanims = llParseString2List(llList2String(slots, n * 8 + 3), ["~"], []);
 											facecount = llGetListLength(faceanims);
 
-											if(facecount > 0 && (llListFindList(SeatedAvs(), [thisAV]) != -1))  //modified cause face anims were being imposed after AV stands.
+											if(facecount && sits(thisAV))  //modified cause face anims were being imposed after AV stands.
 												{
 													SetStatus(stFACE_ANIM_DOING);
 													thisAV = llGetPermissionsKey();
@@ -690,7 +667,7 @@ default
 										facecount = llList2Integer(faceTimes, keyHasFacial + 2);
 
 										//if we have facial anims make sure we have permissions for this av
-										if((facecount > 0) && (llListFindList(SeatedAvs(), [thisAV]) != -1))    //modified cause face anims were being imposed after AV stands.
+										if((facecount > 0) && sits(thisAV))    //modified cause face anims were being imposed after AV stands.
 											{
 												SetStatus(stFACE_ANIM_DOING);
 												thisAV = llGetPermissionsKey();
@@ -734,8 +711,10 @@ default
 									}
 						}
 
-					if(llGetListLength(SeatedAvs()) < 1)
+					when((llGetNumberOfPrims() < 2) || (llGetAgentSize(llGetLinkKey(llGetNumberOfPrims())) == ZERO_VECTOR))
 						{
+							// nobody sits on object
+
 							llSetTimerEvent(0.0);
 							UnStatus(stFACE_ANIM_DOING);
 						}

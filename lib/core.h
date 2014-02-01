@@ -28,7 +28,6 @@
 
 
 #define Vec2Rot(_v)                llEuler2Rot((_v) * DEG_TO_RAD)
-#define boolIsAgent(_k)            (ZERO_VECTOR != llGetAgentSize(_k))
 
 #define boolInvalidSlotNo(_no)     (((_no) < 0) || ((_no) > slotMax))
 

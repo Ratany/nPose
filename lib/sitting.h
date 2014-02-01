@@ -25,6 +25,11 @@
 //
 
 
+// this isn´t exactly the right place for boolIsAgent()
+//
+#define boolIsAgent(_k)            (ZERO_VECTOR != llGetAgentSize(_k))
+
+
 // see whether agent _k is sitting on object or not
 //
 // saves creating a list of all agents in assignSlots()
