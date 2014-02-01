@@ -56,7 +56,6 @@
 #ifdef DEBUG_ShowSlots
 #define DEBUG_virtualShowSlots(_l)					\
 	{								\
-		DEBUGmsg("last stride count:", lastStrideCount);	\
 		int $_ = Len(_l) / stride;				\
 		LoopDown($_,						\
 			 DEBUGmsg("---------- stride:", $_, "of", Len(_l) / stride, "----------"); \

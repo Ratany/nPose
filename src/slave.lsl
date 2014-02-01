@@ -20,9 +20,18 @@
 // allowed by the platform.
 
 
+#define DEBUG0 1  // doseats()
+
+
+
 #include <lslstddef.h>
+#include <undetermined.h>
 
 #include <avn/slave.h>
+
+
+#define DEBUG_ShowSlots
+#include <common-slots.h>
 
 #include <constants.h>
 
@@ -40,10 +49,6 @@ int status = 0;
 // chatchannel depends on llGetKey(), should be optimized
 //
 integer chatchannel;
-
-
-
-
 
 
 
@@ -95,9 +100,12 @@ list slots;
 
 // MoveLinkedAv(), inlined saves over 1056 byes
 //
+// does not work when the root prim is not linked?
+//
 #define MoveLinkedAv(linknum, avpos, avrot)				\
 	{								\
-		key user = llGetLinkKey(linknum);			\
+	key user = llGetLinkKey(linknum);				\
+	DEBUGmsg0("user:", llGetUsername(user));			\
 									\
 		if(user)						\
 			{						\
@@ -116,17 +124,73 @@ list slots;
 							}		\
 									\
 						avpos.z += 0.4;		\
+						DEBUGmsg0("repositioning", llGetUsername(user)); \
 						SLPPF(linknum, [PRIM_POSITION, ((avpos - (llRot2Up(avrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, (avrot) * localrot / llGetRootRotation()]); \
 					}				\
 			}						\
 	}
 
 
-doSeats(integer slotNum, key avKey)
+#define boolAvValidLinkNum(_agent) (!(AvLinkNum(_agent) < 0))
+
+#if 0
+integer AvLinkNum(key av)
 {
+	integer linkcount = llGetNumberOfPrims();
+
+	while(av != llGetLinkKey(linkcount))
+		{
+			if(llGetAgentSize(llGetLinkKey(linkcount)) == ZERO_VECTOR)
+				{
+					return -1;
+				}
+
+			linkcount--;
+		}
+
+	return linkcount;
+}
+#endif
+
+#if 1
+// should be inlined
+//
+integer AvLinkNum(key av)
+{
+	integer linkcount = llGetNumberOfPrims();
+
+	key k = llGetLinkKey(linkcount);
+	while((k != av) && (llGetAgentSize((k = llGetLinkKey(linkcount))) != ZERO_VECTOR))
+		{
+			--linkcount;
+		}
+
+	DEBUGmsg0("agent linknum:", (linkcount * ((k == av) - (k != av))));
+	return (linkcount * ((k == av) - (k != av)));
+}
+// (put into getlinknumbers.lsl)
+#endif
+
+
+#define virtualAppliedOffsets(n)					\
+	integer avinoffsets = LstIdx(avatarOffsets, kSlots2Ava(n));	\
+	vector vpos = vSlots2Position(n);				\
+									\
+	if(!iIsUndetermined(avinoffsets))				\
+		{							\
+			vpos += llList2Vector(avatarOffsets, avinoffsets + 1) * rSlots2Rot(n); \
+		}
+
+
+void doSeats(integer slotNum, key avKey)
+{
+	DEBUG_virtualShowSlots(slots);
+
 	IfNStatus(stDOSYNC)
 	{
-		vector vpos = appliedOffsets(slotNum);
+		// creates vector vpos;
+		//
+		virtualAppliedOffsets(slotNum);
 
 		// saves a call to avlinknum when MoveLinkedAv() is inlined
 		//
@@ -138,10 +202,15 @@ doSeats(integer slotNum, key avKey)
 	if(avKey != "")
 		{
 			UnStatus(stFACE_ANIM_DOING);
+
+			// ouch?
+			//
 			stop = llGetListLength(slots) / 8;
+
 			llRequestPermissions(avKey, PERMISSION_TRIGGER_ANIMATION);
 		}
 }
+
 
 list SeatedAvs()
 {
@@ -166,55 +235,6 @@ list SeatedAvs()
 	return [];
 }
 
-#if 0
-integer AvLinkNum(key av)
-{
-	integer linkcount = llGetNumberOfPrims();
-
-	while(av != llGetLinkKey(linkcount))
-		{
-			if(llGetAgentSize(llGetLinkKey(linkcount)) == ZERO_VECTOR)
-				{
-					return -1;
-				}
-
-			linkcount--;
-		}
-
-	return linkcount;
-}
-#endif
-
-
-// should be inlined
-//
-integer AvLinkNum(key av)
-{
-	integer linkcount = llGetNumberOfPrims();
-
-	key k = llGetLinkKey(linkcount);
-	while((k != av) && (llGetAgentSize((k = llGetLinkKey((--linkcount)))) != ZERO_VECTOR));
-
-	return (linkcount * (k == av) - (k != av));
-}
-// (put into getlinknumbers.lsl)
-
-
-vector appliedOffsets(integer n)
-{
-	string slot = llList2String(slots, n * stride + 4);
-	integer avinoffsets = llListFindList(avatarOffsets, [(key)slot]);
-	rotation rot = llList2Rot(slots, n * stride + 2);
-	vector pos = (vector)llList2String(slots, n * stride + 1);
-
-	if(avinoffsets != -1)
-		{
-			vector offset = llList2Vector(avatarOffsets, avinoffsets + 1);
-			pos += offset * rot;
-		}
-
-	return pos;
-}
 
 SetAvatarOffset(key avatar, vector offset)
 {
@@ -687,7 +707,7 @@ default
 												{
 													if(faceindex < facecount)
 														{
-															if(AvLinkNum(av) != -1)
+															if(boolAvValidLinkNum(av))
 																{
 																	llStartAnimation(llList2String(faceanims, faceindex));
 																}
@@ -730,12 +750,13 @@ default
 
 														if(facecount > 0)
 															{
-																if(AvLinkNum(av) != -1 && llList2Integer(faceTimes, faceStride + 1) > 0)
+																bool avln = boolAvValidLinkNum(av);
+																if(avln && llList2Integer(faceTimes, faceStride + 1) > 0)
 																	{
 																		llStartAnimation(animName);
 																	}
 																else
-																	if(AvLinkNum(av) != -1 && llList2Integer(faceTimes, faceStride + 1) == -1)
+																	if(avln != -1 && llList2Integer(faceTimes, faceStride + 1) == -1)
 																		{
 																			llStartAnimation(animName);
 																		}
@@ -787,7 +808,7 @@ default
 
 							for(n = 0; n < stop; ++n)
 								{
-									if(AvLinkNum((key)llList2String(lastanim, n * 2)) == -1)
+									if(boolAvValidLinkNum((key)llList2String(lastanim, n * 2)))
 										{
 											integer index = llListFindList(animsList, [(key)llList2String(lastanim, n * 2)]);
 
