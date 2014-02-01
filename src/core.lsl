@@ -36,7 +36,7 @@
 #include <common-slots.h>
 
 #include <core.h>
-#include <core-constants.h>
+#include <constants.h>
 #include <core-inline.h>
 
 
@@ -531,7 +531,7 @@ default
 												if(sits)
 #endif
 													{
-														llMessageLinked(LINK_SET, -222, agent, NULL_KEY);
+														llMessageLinked(LINK_SET, iUNSIT, agent, NULL_KEY);
 														DEBUGmsg2("no slot for", llGetUsername(agent));
 													}
 											}
@@ -725,7 +725,7 @@ default
 #endif
 											{
 												//no open slots, so unseat them
-												llMessageLinked(LINK_SET, -222, (string)thisKey, NULL_KEY);
+												llMessageLinked(LINK_SET, iUNSIT, (string)thisKey, NULL_KEY);
 												DEBUGmsg2("no slots to sit", llGetUsername(thisKey));
 											}
 									}

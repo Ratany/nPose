@@ -24,41 +24,81 @@
 
 #include <avn/slave.h>
 
+#include <constants.h>
 
+
+
+
+
+// integer stride = 8;
+
+
+
+
+
+// chatchannel depends on llGetKey(), should be optimized
+//
 integer chatchannel;
-string currentanim;
-list lastanim;
-list faceanims;
-integer doingFaceAnim = 0;
-integer gotFaceAnim = 0;
-integer SYNC = 206;
-integer doSync = 0;
-integer ADJUSTOFFSET = 208;
-integer SETOFFSET = 209;
-integer ticker;
-integer primcount;
-integer newprimcount;
-string lastAnimRunning;
-integer seatcount;
-integer nextAvatarOffset;
-integer avatarOffsetsLength = 20;
-list avatarOffsets;
-integer stride = 8;
 
-integer seatupdate = 35353;
-integer memusage = 34334;
-list adjusters = [];
-integer layerPose = -218;
-list animsList; //[string command, string animation name]  use a list to layer multiple animations.
-list faceTimes = [];
-list slots;
-key thisAV;
+// doSync is a status
+//
+integer doSync = 0;
+
+// doingFaceAnim is a status
+//
+integer doingFaceAnim = 0;
+
+// gotFaceAnim is a status
+//
+integer gotFaceAnim = 0;
+
+
+
+
+integer newprimcount;
+
+// must be initialized
+//
+integer nextAvatarOffset = 0;
+
+// ?
+integer primcount;
+
+// use in for loops, should be local
+//
+integer seatcount;
+
+// declared locally as well, purpose unknown
+//
 integer stop;
-integer unsit = -222;
+
+
+
+key thisAV;
+
+list adjusters = [];
+list animsList; //[string command, string animation name]  use a list to layer multiple animations.
+list avatarOffsets;
+list faceTimes = [];
+list faceanims;
+list lastanim;
+list slots;
+
+// can probably be local
+//
+string currentanim;
+
+// might be a status
+//
 string facialEnable = "on";
 
+// can probably be local
+//
+string lastAnimRunning;
 
 
+// MoveLinkedAv(), inlined saves over 1056 byes
+//
 #define MoveLinkedAv(linknum, avpos, avrot)				\
 	{								\
 		key user = llGetLinkKey(linknum);			\
@@ -429,7 +469,7 @@ default
 										}
 								}
 							else
-								if(num == unsit)
+								if(num == iUNSIT)
 									{
 										llUnSit((key)str);
 									}
