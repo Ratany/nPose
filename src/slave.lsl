@@ -43,9 +43,6 @@ integer chatchannel;
 
 
 
-// gotFaceAnim is a status
-//
-integer gotFaceAnim = 0;
 
 
 
@@ -393,7 +390,7 @@ default
 									integer stop = llGetListLength(seatsavailable) / 8;
 									slots = [];
 									faceTimes = [];
-									gotFaceAnim = 0;
+									UnStatus(stFACE_ANIM_GOT);
 									string buttonStr = "";
 									string faces = "";
 
@@ -444,7 +441,7 @@ default
 																}
 														}
 
-													gotFaceAnim = 1;
+													SetStatus(stFACE_ANIM_GOT);
 													//add sitter key and flag if timer defined followed by a stride 2 list containing face anim name and associated time
 													faceTimes += [(key)llList2String(seatsavailable, (seatcount - 1) * 8 + 4), hasNewFaceTime, facecount] + faces;
 												}
@@ -622,11 +619,11 @@ default
 			}
 
 			//start timer if we have face anims for any slot
-			if(gotFaceAnim == 1)
-				{
-					llSetTimerEvent(1.0);
-					SetStatus(stFACE_ANIM_DOING);
-				}
+			IfStatus(stFACE_ANIM_GOT)
+			{
+				llSetTimerEvent(1.0);
+				SetStatus(stFACE_ANIM_DOING);
+			}
 			else
 				{
 					llSetTimerEvent(0.0);
