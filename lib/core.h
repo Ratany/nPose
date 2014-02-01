@@ -33,7 +33,7 @@
 #define boolInvalidSlotNo(_no)     (((_no) < 0) || ((_no) > slotMax))
 
 
-int status;
+int status = 0;
 #define stADJUSTERS                1
 #define stEXPLICIT                 2
 

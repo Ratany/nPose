@@ -28,9 +28,10 @@
 
 
 
-
-
-// integer stride = 8;
+int status = 0;
+#define stDOSYNC                   1
+#define stFACE_ANIM_DOING          2
+#define stFACE_ANIM_GOT            3
 
 
 
@@ -40,9 +41,6 @@
 //
 integer chatchannel;
 
-// doSync is a status
-//
-integer doSync = 0;
 
 // doingFaceAnim is a status
 //
@@ -76,13 +74,6 @@ integer stop;
 
 key thisAV;
 
-list adjusters = [];
-list animsList; //[string command, string animation name]  use a list to layer multiple animations.
-list avatarOffsets;
-list faceTimes = [];
-list faceanims;
-list lastanim;
-list slots;
 
 // can probably be local
 //
@@ -95,6 +86,17 @@ string facialEnable = "on";
 // can probably be local
 //
 string lastAnimRunning;
+
+
+
+list adjusters = [];
+list animsList; //[string command, string animation name]  use a list to layer multiple animations.
+list avatarOffsets;
+list faceTimes = [];
+list faceanims;
+list lastanim;
+list slots;
+
 
 
 // MoveLinkedAv(), inlined saves over 1056 byes
@@ -128,16 +130,16 @@ string lastAnimRunning;
 
 doSeats(integer slotNum, key avKey)
 {
-	if(doSync != 1)
-		{
-			vector vpos = appliedOffsets(slotNum);
+	IfNStatus(stDOSYNC)
+	{
+		vector vpos = appliedOffsets(slotNum);
 
-			// saves a call to avlinknum when MoveLinkedAv() is inlined
-			//
-			int avlinknum = AvLinkNum(avKey);
+		// saves a call to avlinknum when MoveLinkedAv() is inlined
+		//
+		int avlinknum = AvLinkNum(avKey);
 
-			MoveLinkedAv(avlinknum, vpos, llList2Rot(slots, ((slotNum) * 8) + 2));
-		}
+		MoveLinkedAv(avlinknum, vpos, llList2Rot(slots, ((slotNum) * 8) + 2));
+	}
 
 	if(avKey != "")
 		{
@@ -461,7 +463,7 @@ default
 												{
 													if(llListFindList(SeatedAvs(), [llList2Key(slots, seatcount * 8 + 4)]) != -1)
 														{
-															doSync = 0;
+															UnStatus(stDOSYNC);
 															doSeats(seatcount, llList2String(slots, (seatcount) * 8 + 4));
 															return;
 														}
@@ -476,7 +478,7 @@ default
 								else
 									if(num == SYNC)
 										{
-											doSync = 1;
+											SetStatus(stDOSYNC);
 											integer stop = llGetListLength(slots) / 8;
 
 											for(seatcount = 0; seatcount < stop; ++seatcount)
@@ -580,7 +582,7 @@ default
 					//index thisAV as a string in the list and then we can find the last animation.
 					integer thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
 
-					if(doSync != 1)
+					IfNStatus(stDOSYNC)
 						{
 							if(indexx != -1)
 								{
