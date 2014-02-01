@@ -42,9 +42,6 @@ int status = 0;
 integer chatchannel;
 
 
-// doingFaceAnim is a status
-//
-integer doingFaceAnim = 0;
 
 // gotFaceAnim is a status
 //
@@ -143,7 +140,7 @@ doSeats(integer slotNum, key avKey)
 
 	if(avKey != "")
 		{
-			doingFaceAnim = 0;
+			UnStatus(stFACE_ANIM_DOING);
 			stop = llGetListLength(slots) / 8;
 			llRequestPermissions(avKey, PERMISSION_TRIGGER_ANIMATION);
 		}
@@ -569,71 +566,71 @@ default
 		{
 			thisAV = llGetPermissionsKey();
 
-			if(doingFaceAnim != 1)
+			IfNStatus(stFACE_ANIM_DOING)
+			{
+				//get the current requested animation from list slots.
+				integer avIndex = llListFindList(slots, [thisAV]);
+				currentanim = llList2String(slots, avIndex - 4);
+				//look for the default LL 'Sit' animation.  We must stop this animation if it is running. New Sitter!
+				list animsRunning = llGetAnimationList(thisAV);
+				integer indexx = llListFindList(animsRunning, [(key)"1a5fe8ac-a804-8a5d-7cbd-56bd83184568"]);
+				//we also need to know the last animation running.  Not New Sitter!
+				//lastanim is a 2 stride list [thisAV, last active animation name]
+				//index thisAV as a string in the list and then we can find the last animation.
+				integer thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
+
+				IfNStatus(stDOSYNC)
 				{
-					//get the current requested animation from list slots.
-					integer avIndex = llListFindList(slots, [thisAV]);
-					currentanim = llList2String(slots, avIndex - 4);
-					//look for the default LL 'Sit' animation.  We must stop this animation if it is running. New Sitter!
-					list animsRunning = llGetAnimationList(thisAV);
-					integer indexx = llListFindList(animsRunning, [(key)"1a5fe8ac-a804-8a5d-7cbd-56bd83184568"]);
-					//we also need to know the last animation running.  Not New Sitter!
-					//lastanim is a 2 stride list [thisAV, last active animation name]
-					//index thisAV as a string in the list and then we can find the last animation.
-					integer thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
-
-					IfNStatus(stDOSYNC)
+					if(indexx != -1)
 						{
-							if(indexx != -1)
-								{
-									lastAnimRunning = "Sit";
-									lastanim += [(string)thisAV, "Sit"];
-								}
+							lastAnimRunning = "Sit";
+							lastanim += [(string)thisAV, "Sit"];
+						}
 
-							if(thisAvIndex != -1)
-								{
-									lastAnimRunning = llList2String(lastanim, thisAvIndex + 1);
-								}
+					if(thisAvIndex != -1)
+						{
+							lastAnimRunning = llList2String(lastanim, thisAvIndex + 1);
+						}
 
-							//now we know which animation to stop so go ahead and stop it.
-							if(lastAnimRunning != "")
-								{
-									llStopAnimation(lastAnimRunning);
-								}
+					//now we know which animation to stop so go ahead and stop it.
+					if(lastAnimRunning != "")
+						{
+							llStopAnimation(lastAnimRunning);
+						}
 
-							thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
-							//now that we have the name of the last animation running, we can update the list with current animation.
-							lastanim = llListReplaceList(lastanim, [(string)thisAV, currentanim], thisAvIndex, thisAvIndex + 1);
+					thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
+					//now that we have the name of the last animation running, we can update the list with current animation.
+					lastanim = llListReplaceList(lastanim, [(string)thisAV, currentanim], thisAvIndex, thisAvIndex + 1);
 
-							if(avIndex != -1)
+					if(avIndex != -1)
+						{
+							if(llListFindList(SeatedAvs(), [thisAV]) != -1)
 								{
-									if(llListFindList(SeatedAvs(), [thisAV]) != -1)
-										{
-											llStartAnimation(currentanim);
-										}
+									llStartAnimation(currentanim);
 								}
 						}
-					else
-						if(llListFindList(SeatedAvs(), [thisAV]) != -1)
-							{
-								llStopAnimation(currentanim);
-								llStartAnimation("sit");
-								llSleep(0.05);
-								llStopAnimation("sit");
-								llStartAnimation(currentanim);
-							}
 				}
+				else
+					if(llListFindList(SeatedAvs(), [thisAV]) != -1)
+						{
+							llStopAnimation(currentanim);
+							llStartAnimation("sit");
+							llSleep(0.05);
+							llStopAnimation("sit");
+							llStartAnimation(currentanim);
+						}
+			}
 
 			//start timer if we have face anims for any slot
 			if(gotFaceAnim == 1)
 				{
 					llSetTimerEvent(1.0);
-					doingFaceAnim = 1;
+					SetStatus(stFACE_ANIM_DOING);
 				}
 			else
 				{
 					llSetTimerEvent(0.0);
-					doingFaceAnim = 0;
+					UnStatus(stFACE_ANIM_DOING);
 				}
 
 			//check all the slots for next seated AV, call for next seated AV to move and animate.
@@ -679,7 +676,7 @@ default
 
 											if(facecount > 0 && (llListFindList(SeatedAvs(), [thisAV]) != -1))  //modified cause face anims were being imposed after AV stands.
 												{
-													doingFaceAnim = 1;
+													SetStatus(stFACE_ANIM_DOING);
 													thisAV = llGetPermissionsKey();
 													llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
 												}
@@ -713,7 +710,7 @@ default
 										//if we have facial anims make sure we have permissions for this av
 										if((facecount > 0) && (llListFindList(SeatedAvs(), [thisAV]) != -1))    //modified cause face anims were being imposed after AV stands.
 											{
-												doingFaceAnim = 1;
+												SetStatus(stFACE_ANIM_DOING);
 												thisAV = llGetPermissionsKey();
 												llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
 											}
@@ -757,7 +754,7 @@ default
 					if(llGetListLength(SeatedAvs()) < 1)
 						{
 							llSetTimerEvent(0.0);
-							doingFaceAnim = 0;
+							UnStatus(stFACE_ANIM_DOING);
 						}
 				}
 		}
