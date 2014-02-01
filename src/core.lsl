@@ -400,36 +400,37 @@ default
 
 	event listen(integer channel, string name, key id, string message)
 	{
-		list temp = llParseString2List(message, ["|"], []);
+		when(llGetOwner() != llGetOwnerKey(id))
+			{
+				return;
+			}
 
 		DEBUG_TellMemory("listener");
 
-		if(name == "Adjuster")
+		unless(name != "Adjuster")
 			{
 				llMessageLinked(LINK_SET, 3, message, id);
 
 				return;
 			}
 
-		unless(llGetListLength(temp) < 2)
+		unless(id != hudId)
 			{
-				if(name == llKey2Name(hudId))
-					{
-						//need to process hud commands
+				//need to process hud commands
 
-						list hudcommands = ["adjust", ADJUST, "stopadjust", STOPADJUST, "posdump", DUMP, "hudsync", SYNC];
-						int $_ = LstIdx(hudcommands, message);
-						if(~$_)
-							{
-								llMessageLinked(LINK_SET, llList2Integer(hudcommands, $_ + 1), "", "");
-							}
+				list hudcommands = ["adjust", ADJUST, "stopadjust", STOPADJUST, "posdump", DUMP, "hudsync", SYNC];
+				int $_ = LstIdx(hudcommands, message);
+				if(~$_)
+					{
+						llMessageLinked(LINK_SET, llList2Integer(hudcommands, $_ + 1), "", "");
 					}
+
 				return;
 			}
 
 		bool $_0 = (llGetSubString(message, 0, 4) == "ping");
 		bool $_1 = (llGetSubString(message, 0, 8) == "PROPRELAY");
-		if(($_0 || $_1) && (llGetOwnerKey(id) == llGetOwner()))
+		if($_0 || $_1)
 			{
 				if($_0)
 					{
@@ -442,13 +443,18 @@ default
 					{
 						list msg = llParseString2List(message, ["|"], []);
 						llMessageLinked(LINK_SET, llList2Integer(msg, 1), llList2String(msg, 2), llList2Key(msg, 3));
-
-						return;
 					}
 
-				DEBUGmsg1("the message here is:", message);
+				return;
+			}
 
-				list params = llParseString2List(message, ["|"], []);
+		DEBUGmsg1("the message here is:", message);
+
+		// supposedly a message from a prop, intended to do some rotation/positioning
+		//
+		list params = llParseString2List(message, ["|"], []);
+		unless(Len(params) < 2)
+			{
 				vector newpos = ForceList2Vector(params, 0) - llGetPos();
 				newpos /= llGetRot();
 				rotation newrot = ForceList2Rot(params, 1) / llGetRot();

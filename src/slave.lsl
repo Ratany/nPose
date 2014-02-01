@@ -102,32 +102,25 @@ list slots;
 //
 // does not work when the root prim is not linked?
 //
-#define MoveLinkedAv(linknum, avpos, avrot)				\
+// This is now part of doSeats()!
+//
+#define inlineMoveLinkedAv(linknum, avpos, avrot)			\
+	int avlinknum = AvLinkNum(avKey);				\
+	unless(avlinknum < 0)						\
 	{								\
-	key user = llGetLinkKey(linknum);				\
-	DEBUGmsg0("user:", llGetUsername(user));			\
+		vector size = llGetAgentSize(avKey);			\
 									\
-		if(user)						\
+		rotation localrot = ZERO_ROTATION;			\
+		vector localpos = ZERO_VECTOR;				\
+									\
+		if(llGetLinkNumber() > 1)				\
 			{						\
-				vector size = llGetAgentSize(user);	\
-									\
-				if(size)				\
-					{				\
-									\
-						rotation localrot = ZERO_ROTATION; \
-						vector localpos = ZERO_VECTOR; \
-									\
-						if(llGetLinkNumber() > 1) \
-							{		\
-								localrot = llGetLocalRot(); \
-								localpos = llGetLocalPos(); \
-							}		\
-									\
-						avpos.z += 0.4;		\
-						DEBUGmsg0("repositioning", llGetUsername(user)); \
-						SLPPF(linknum, [PRIM_POSITION, ((avpos - (llRot2Up(avrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, (avrot) * localrot / llGetRootRotation()]); \
-					}				\
+				localrot = llGetLocalRot();		\
+				localpos = llGetLocalPos();		\
 			}						\
+									\
+		avpos.z += 0.4;						\
+		SLPPF(linknum, [PRIM_POSITION, ((avpos - (llRot2Up(avrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, (avrot) * localrot / llGetRootRotation()]); \
 	}
 
 
@@ -151,7 +144,7 @@ integer AvLinkNum(key av)
 // (put into getlinknumbers.lsl)
 
 
-#define virtualAppliedOffsets(n)					\
+#define inlineAppliedOffsets(n)						\
 	integer avinoffsets = LstIdx(avatarOffsets, kSlots2Ava(n));	\
 	vector vpos = vSlots2Position(n);				\
 									\
@@ -165,29 +158,22 @@ void doSeats(integer slotNum, key avKey)
 {
 	DEBUG_virtualShowSlots(slots);
 
-	IfNStatus(stDOSYNC)
+	when(avKey)
 	{
-		// creates vector vpos;
+		UnStatus(stFACE_ANIM_DOING);
+
+		// ouch?
 		//
-		virtualAppliedOffsets(slotNum);
+		stop = llGetListLength(slots) / 8;
 
-		// saves a call to avlinknum when MoveLinkedAv() is inlined
-		//
-		int avlinknum = AvLinkNum(avKey);
+		llRequestPermissions(avKey, PERMISSION_TRIGGER_ANIMATION);
 
-		MoveLinkedAv(avlinknum, vpos, llList2Rot(slots, ((slotNum) * 8) + 2));
-	}
-
-	if(avKey != "")
+		IfNStatus(stDOSYNC)
 		{
-			UnStatus(stFACE_ANIM_DOING);
-
-			// ouch?
-			//
-			stop = llGetListLength(slots) / 8;
-
-			llRequestPermissions(avKey, PERMISSION_TRIGGER_ANIMATION);
+			inlineAppliedOffsets(slotNum);
+			inlineMoveLinkedAv(avlinknum, vpos, llList2Rot(slots, ((slotNum) * 8) + 2));
 		}
+	}
 }
 
 
