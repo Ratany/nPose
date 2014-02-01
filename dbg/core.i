@@ -188,7 +188,7 @@ default
 {
 	state_entry()
 	{
-		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-91bb8e5d5137f7a3d4d8a5c843d6ad17cb3ab49f 2014-01-31 15:39:50");
+		llOwnerSay("(" + (string)((61440 - llGetUsedMemory()) >> 10) + "kB) ~> " + "repo-npose-722f96f22a46d78ae8af555e6ed75be5c2ef62bd 2014-02-01 06:51:47");
 		integer n = llGetObjectPrimCount(llGetKey());
 
 		if(!(n))

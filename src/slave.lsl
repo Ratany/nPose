@@ -41,12 +41,44 @@ string facialEnable = "on";
 
 
 
+#define MoveLinkedAv(linknum, avpos, avrot)				\
+	{								\
+		key user = llGetLinkKey(linknum);			\
+									\
+		if(user)						\
+			{						\
+				vector size = llGetAgentSize(user);	\
+									\
+				if(size)				\
+					{				\
+									\
+						rotation localrot = ZERO_ROTATION; \
+						vector localpos = ZERO_VECTOR; \
+									\
+						if(llGetLinkNumber() > 1) \
+							{		\
+								localrot = llGetLocalRot(); \
+								localpos = llGetLocalPos(); \
+							}		\
+									\
+						avpos.z += 0.4;		\
+						SLPPF(linknum, [PRIM_POSITION, ((avpos - (llRot2Up(avrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, (avrot) * localrot / llGetRootRotation()]); \
+					}				\
+			}						\
+	}
+
+
 doSeats(integer slotNum, key avKey)
 {
 	if(doSync != 1)
 		{
 			vector vpos = appliedOffsets(slotNum);
-			MoveLinkedAv(AvLinkNum(avKey), vpos, llList2Rot(slots, ((slotNum) * 8) + 2));
+
+			// saves a call to avlinknum when MoveLinkedAv() is inlined
+			//
+			int avlinknum = AvLinkNum(avKey);
+
+			MoveLinkedAv(avlinknum, vpos, llList2Rot(slots, ((slotNum) * 8) + 2));
 		}
 
 	if(avKey != "")
@@ -112,38 +144,6 @@ integer AvLinkNum(key av)
 	return (linkcount * (k == av) - (k != av));
 }
 // (put into getlinknumbers.lsl)
-
-
-
-
-
-
-
-#define MoveLinkedAv(linknum, avpos, avrot)
-{
-	key user = llGetLinkKey(linknum);
-
-	if(user)
-		{
-			vector size = llGetAgentSize(user);
-
-			if(size)
-				{
-
-					rotation localrot = ZERO_ROTATION;
-					vector localpos = ZERO_VECTOR;
-
-					if(llGetLinkNumber() > 1)
-						{
-							localrot = llGetLocalRot();
-							localpos = llGetLocalPos();
-						}
-
-					avpos.z += 0.4;
-					llSetLinkPrimitiveParamsFast(linknum, [PRIM_POSITION, ((avpos - (llRot2Up(avrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, (avrot) * localrot / llGetRootRotation()]);
-				}
-		}
-}
 
 
 vector appliedOffsets(integer n)

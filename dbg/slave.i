@@ -54,7 +54,30 @@ doSeats(integer slotNum, key avKey)
 	if(doSync != 1)
 	{
 		vector vpos = appliedOffsets(slotNum);
-		MoveLinkedAv(AvLinkNum(avKey), vpos, llList2Rot(slots, ((slotNum) * 8) + 2));
+		int avlinknum = AvLinkNum(avKey);
+		{
+			key user = llGetLinkKey(avlinknum);
+
+			if(user)
+			{
+				vector size = llGetAgentSize(user);
+
+				if(size)
+				{
+					rotation localrot = ZERO_ROTATION;
+					vector localpos = ZERO_VECTOR;
+
+					if(llGetLinkNumber() > 1)
+					{
+						localrot = llGetLocalRot();
+						localpos = llGetLocalPos();
+					}
+
+					vpos.z += 0.4;
+					SLPPF(avlinknum, [PRIM_POSITION, ((vpos - (llRot2Up(llList2Rot(slots, ((slotNum) * 8) + 2)) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, (llList2Rot(slots, ((slotNum) * 8) + 2)) * localrot / llGetRootRotation()]);
+				}
+			}
+		}
 	}
 
 	if(avKey != "")
@@ -89,42 +112,11 @@ list SeatedAvs()
 integer AvLinkNum(key av)
 {
 	integer linkcount = llGetNumberOfPrims();
+	key k = llGetLinkKey(linkcount);
 
-	while(av != llGetLinkKey(linkcount))
-	{
-		if(llGetAgentSize(llGetLinkKey(linkcount)) == ZERO_VECTOR)
-		{
-			return -1;
-		}
+	while((k != av) && (llGetAgentSize((k = llGetLinkKey((--linkcount)))) != ZERO_VECTOR));
 
-		linkcount--;
-	}
-
-	return linkcount;
-}
-MoveLinkedAv(integer linknum, vector avpos, rotation avrot)
-{
-	key user = llGetLinkKey(linknum);
-
-	if(user)
-	{
-		vector size = llGetAgentSize(user);
-
-		if(size)
-		{
-			rotation localrot = ZERO_ROTATION;
-			vector localpos = ZERO_VECTOR;
-
-			if(llGetLinkNumber() > 1)
-			{
-				localrot = llGetLocalRot();
-				localpos = llGetLocalPos();
-			}
-
-			avpos.z += 0.4;
-			llSetLinkPrimitiveParamsFast(linknum, [PRIM_POSITION, ((avpos - (llRot2Up(avrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, avrot * localrot / llGetRootRotation()]);
-		}
-	}
+	return (linkcount * (k == av) - (k != av));
 }
 vector appliedOffsets(integer n)
 {
