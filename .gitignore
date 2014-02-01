@@ -1,9 +1,2 @@
 *~
-*.clean
 TAGS
-replaceassignments.txt
-*.d
-*.di
-*-is-in-lookup-table
-avn/*.h
-avn/*.l
