@@ -36,11 +36,6 @@
 #define _INLINE_FindEmptySlot
 
 
-// define this to use the function sits() instead of an inlined version
-//
-#define _OUTLINE_virtualboolIsSitting
-
-
 // inlines SwapTwoSlots()
 //
 // #define _INLINE_SwapTwoSlots
@@ -51,35 +46,6 @@
 // inlined parts start below
 //
 ///////////////////////////////////////////////////////////////////////////
-
-
-
-
-// see whether agent _k is sitting on object or not
-//
-// saves creating a list of all agents in assignSlots()
-//
-#define virtualboolIsSitting(_k, _bool)					\
-	{								\
-		int $_ = llGetNumberOfPrims();				\
-		_bool = $_;						\
-		while($_ && !(_bool = !(llGetLinkKey($_) != (_k))) && boolIsAgent(llGetLinkKey($_))) \
-			{						\
-				--$_;					\
-			}						\
-	}
-
-
-// might save memory to have this as a function
-//
-#ifdef _OUTLINE_virtualboolIsSitting
-bool sits(key k)
-{
-	bool b;
-	virtualboolIsSitting(k, b);
-	return b;
-}
-#endif
 
 
 #define str_replace(str, search, replace)         llDumpList2String(llParseStringKeepNulls(str, [search], []), replace)

@@ -38,6 +38,7 @@
 #include <core.h>
 #include <constants.h>
 #include <core-inline.h>
+#include <sitting.h>
 
 
 ProcessLine(string line, key av)
@@ -529,13 +530,7 @@ default
 											{
 												// no free slot is available, so unsit the agent from the slot
 												//
-#ifdef _OUTLINE_virtualboolIsSitting
 												if(sits((key)agent))
-#else
-													bool sits;
-												virtualboolIsSitting(agent, sits);
-												if(sits)
-#endif
 													{
 														llMessageLinked(LINK_SET, iUNSIT, agent, NULL_KEY);
 														DEBUGmsg2("no slot for", llGetUsername(agent));
@@ -627,7 +622,6 @@ default
 						//
 						int n = Len(slots) / stride;
 
-#ifdef _OUTLINE_virtualboolIsSitting
 						LoopDown(n,
 							 if(!sits(kSlots2Ava(n)))
 								 {
@@ -635,18 +629,6 @@ default
 									 DEBUGmsg2("unassigned slot of agent:", kSlots2Ava(n));
 								 }
 							 );
-#else
-						LoopDown(n,
-							 key agent = kSlots2Ava(n);
-							 bool sits;
-							 virtualboolIsSitting(agent, sits);
-							 if(!sits)
-								 {
-									 slots = llListReplaceList(slots, [""], n * stride + 4, n * stride + 4);
-									 DEBUGmsg2("unassigned slot of agent:", llGetUsername(agent));
-								 }
-							 );
-#endif
 
 						lastPrimCount = curPrimCount;
 						llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
@@ -722,13 +704,7 @@ default
 									{
 										// don´t unsit agent when they aren´t sitting anymore
 										//
-#ifdef _OUTLINE_virtualboolIsSitting
 										if(sits(thisKey))
-#else
-											bool sits;
-										virtualboolIsSitting(thisKey, sits);
-										if(sits)
-#endif
 											{
 												//no open slots, so unseat them
 												llMessageLinked(LINK_SET, iUNSIT, (string)thisKey, NULL_KEY);
