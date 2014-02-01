@@ -195,4 +195,4 @@ void SwapTwoSlots(integer currentseatnum, integer newseatnum)
 
 
 
-#endif _CORE_INLINE
+#endif  // _CORE_INLINE
