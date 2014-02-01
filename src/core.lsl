@@ -61,7 +61,7 @@ ProcessLine(string line, key av)
 			if(slotMax < lastStrideCount)
 				{
 					slots = llListReplaceList(slots, [llList2String(params, 1), ForceList2Vector(params, 2),
-									  Vec2Rot(ForceList2Vector(params, 3)), llList2Key(params, 4), llList2String(slots, (slotMax) * stride + 4),
+									  Vec2Rot(ForceList2Vector(params, 3)), llList2Key(params, 4), llList2Key(slots, (slotMax) * stride + 4),
 									  "", "", "seat" + (string)(slotMax + 1)], slotMax * stride, slotMax * stride + 7);
 
 					DEBUGmsg2("slots replace, params:", llList2CSV(params));
@@ -326,11 +326,13 @@ default
 
 		if(num == SWAP)
 			{
+				DEBUGmsg3("should swap some of", slotMax, "slots");
 				// length is irrelevant
 				//
 				// if(llGetListLength(slots) / stride >= 2)
-				unless(2 < slotMax)
+				when(2 < slotMax)
 					{
+						DEBUGmsg3("swapping some of", slotMax, "slots");
 						list seats2Swap = llParseString2List(str, [","], []);
 						SwapTwoSlots(llList2Integer(seats2Swap, 0), llList2Integer(seats2Swap, 1));
 					}

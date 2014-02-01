@@ -38,7 +38,7 @@
 
 // inlines SwapTwoSlots()
 //
-// #define _INLINE_SwapTwoSlots
+#define _INLINE_SwapTwoSlots
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -91,6 +91,8 @@ integer FindEmptySlot()
 #define SwapTwoSlots(currentseatnum, newseatnum)			\
 	int OldSlot = iSeatNoToSlotNo((currentseatnum));		\
 	int NewSlot = iSeatNoToSlotNo((newseatnum));			\
+									\
+	DEBUGmsg3("swap slots:", OldSlot, "with", NewSlot);		\
 									\
 	when((OldSlot != NewSlot) && !boolInvalidSlotNo(OldSlot) && !boolInvalidSlotNo(NewSlot)) \
 	{								\
