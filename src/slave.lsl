@@ -20,7 +20,7 @@
 // allowed by the platform.
 
 
-#define DEBUG0 1  // doseats()
+#define DEBUG0 0  // doseats()
 
 
 
@@ -30,7 +30,7 @@
 #include <avn/slave.h>
 
 
-#define DEBUG_ShowSlots
+// #define DEBUG_ShowSlots
 #include <common-slots.h>
 
 #include <constants.h>
@@ -133,26 +133,6 @@ list slots;
 
 #define boolAvValidLinkNum(_agent) (!(AvLinkNum(_agent) < 0))
 
-#if 0
-integer AvLinkNum(key av)
-{
-	integer linkcount = llGetNumberOfPrims();
-
-	while(av != llGetLinkKey(linkcount))
-		{
-			if(llGetAgentSize(llGetLinkKey(linkcount)) == ZERO_VECTOR)
-				{
-					return -1;
-				}
-
-			linkcount--;
-		}
-
-	return linkcount;
-}
-#endif
-
-#if 1
 // should be inlined
 //
 integer AvLinkNum(key av)
@@ -169,7 +149,6 @@ integer AvLinkNum(key av)
 	return (linkcount * ((k == av) - (k != av)));
 }
 // (put into getlinknumbers.lsl)
-#endif
 
 
 #define virtualAppliedOffsets(n)					\
