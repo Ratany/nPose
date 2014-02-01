@@ -33,58 +33,7 @@
 #include <undetermined.h>
 #include <avn/core.h>
 
-// animationName, position vector, rotation vector, facial anim name, seated AV key, SATMSG, NOTSATMSG, Seat#
-//
-#define SLOTIDX_pose               0
-#define SLOTIDX_position           1
-#define SLOTIDX_rot                2
-#define SLOTIDX_facial             3
-#define SLOTIDX_agent              4
-#define SLOTIDX_satmsg             5
-#define SLOTIDX_notsat             6
-#define SLOTIDX_seatno             7
-
-
-#define sSlots2Pose(_strideidx)         llList2String   (slots, SLOTIDX_pose     + stride * (_strideidx))
-#define vSlots2Position(_strideidx)     ForceList2Vector(slots, SLOTIDX_position + stride * (_strideidx))
-#define rSlots2Rot(_strideidx)          ForceList2Rot   (slots, SLOTIDX_rot      + stride * (_strideidx))
-#define sSlots2Facials(_strideidx)      llList2String   (slots, SLOTIDX_facial   + stride * (_strideidx))
-#define kSlots2Ava(_strideidx)          llList2Key      (slots, SLOTIDX_agent    + stride * (_strideidx))
-#define sSlots2Satmsg(_strideidx)       llList2String   (slots, SLOTIDX_satmsg   + stride * (_strideidx))
-#define sSlots2Notsat(_strideidx)       llList2String   (slots, SLOTIDX_notsat   + stride * (_strideidx))
-#define sSlots2Seat(_strideidx)         llList2String   (slots, SLOTIDX_seatno   + stride * (_strideidx))
-#define iSlots2SeatNo(_strideidx)       ((int)Endstr(sSlots2Seat(_strideidx), 4))
-
-
-#ifdef DEBUG_ShowSlots
-#define DEBUG_virtualShowSlots(_l)					\
-	{								\
-		DEBUGmsg("last stride count:", lastStrideCount);	\
-		int $_ = Len(_l) / stride;				\
-		LoopDown($_,						\
-			 DEBUGmsg("---------- stride:", $_, "of", Len(_l) / stride, "----------"); \
-			 opf("pose:", sSlots2Pose($_));			\
-			 opf("pos :", vSlots2Position($_));		\
-			 opf("rot :", rSlots2Rot($_));			\
-			 opf("face:", sSlots2Facials($_));		\
-			 opf("ava :", kSlots2Ava($_));			\
-			 opf("sat :", sSlots2Satmsg($_));		\
-			 opf("not :", sSlots2Notsat($_));		\
-			 opf("seat:", sSlots2Seat($_)));		\
-		if(Onlst(_l, llGetOwner()))				\
-			{						\
-				opf("\towner on list");			\
-			}						\
-		else							\
-			{						\
-				opf("\towner NOT on list");		\
-			}						\
-	}
-// 		opf("CSV:", llList2CSV(_l));
-#else
-#define DEBUG_virtualShowSlots(...)
-#endif
-
+#include <common-slots.h>
 
 #include <core-constants.h>
 #include <core-inline.h>
@@ -99,7 +48,7 @@ int status;
 #define boolIsAgent(_k)            (ZERO_VECTOR != llGetAgentSize(_k))
 
 #define boolInvalidSlotNo(_no)     (((_no) < 0) || ((_no) > slotMax))
-#define iSeatNoToSlotNo(_n)        (LstIdx(slots, (sSEAT) + (string)(_n)) / (stride))
+
 
 
 
@@ -120,156 +69,6 @@ string btncard;
 string card;
 
 list slots;
-
-
-// LSL is too retarded to convert a string to a vector when the string
-// is on a list.  This must be expensively forced :((
-//
-#define ForceList2Vector(_l, _n)   ((vector)llList2String(_l, _n))
-//
-// same bug goes for rotations :((
-//
-#define ForceList2Rot(_l, _n)      ((rotation)llList2String(_l, _n))
-
-
-// see whether agent _k is sitting on object or not
-//
-// saves creating a list of all agents in assignSlots()
-//
-#define virtualboolIsSitting(_k, _bool)					\
-	{								\
-		int $_ = llGetNumberOfPrims();				\
-		_bool = $_;						\
-		while($_ && !(_bool = !(llGetLinkKey($_) != (_k))) && boolIsAgent(llGetLinkKey($_))) \
-			{						\
-				--$_;					\
-			}						\
-	}
-
-
-// might save memory to have this as a function
-//
-#ifdef _OUTLINE_virtualboolIsSitting
-bool sits(key k)
-{
-	bool b;
-	virtualboolIsSitting(k, b);
-	return b;
-}
-#endif
-
-
-#define str_replace(str, search, replace)         llDumpList2String(llParseStringKeepNulls(str, [search], []), replace)
-
-
-#ifdef _INLINE_FindEmptySlot
-//
-// FindEmptySlot(): this function is not ideal for inlining
-//
-// return < 0 when no slot is free rather than -1
-//
-#define FindEmptySlot(_ret)						\
-	_ret = 0;							\
-	while((_ret < slotMax) && (llList2String(slots, _ret * (stride) + 4) != "")) \
-		{							\
-			++_ret;					\
-		}							\
-	_ret = _ret * ((_ret != slotMax) - (_ret == slotMax)) - !slotMax
-
-#else
-
-integer FindEmptySlot()
-{
-	int n = 0;
-	while(n < slotMax)
-		{
-			if(llList2String(slots, n * stride + 4) == "")
-				{
-					return n;
-				}
-			++n;
-		}
-
-	return -1;
-}
-#endif
-
-
-#ifdef _INLINE_SwapTwoSlots
-
-// SwapTwoSlots() can optionally be inlined
-
-#define SwapTwoSlots(currentseatnum, newseatnum)			\
-	int OldSlot = iSeatNoToSlotNo((currentseatnum));		\
-	int NewSlot = iSeatNoToSlotNo((newseatnum));			\
-									\
-	when((OldSlot != NewSlot) && !boolInvalidSlotNo(OldSlot) && !boolInvalidSlotNo(NewSlot)) \
-	{								\
-		key oldslotagent = kSlots2Ava(OldSlot);			\
-		OldSlot *= stride;					\
-		OldSlot += SLOTIDX_agent;				\
-		slots = llListReplaceList(slots, [kSlots2Ava(NewSlot)], OldSlot, OldSlot); \
-									\
-		NewSlot *= stride;					\
-		NewSlot += SLOTIDX_agent;				\
-		slots = llListReplaceList(slots, [oldslotagent], NewSlot, NewSlot); \
-		llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);	\
-	}
-
-#else
-
-void SwapTwoSlots(integer currentseatnum, integer newseatnum)
-{
-	int OldSlot = iSeatNoToSlotNo(currentseatnum);
-	int NewSlot = iSeatNoToSlotNo(newseatnum);
-
-	when((OldSlot != NewSlot) && !boolInvalidSlotNo(OldSlot) && !boolInvalidSlotNo(NewSlot))
-		{
-			// put the new agent into the old slot
-			//
-			key oldslotagent = kSlots2Ava(OldSlot);
-			OldSlot *= stride;
-			OldSlot += SLOTIDX_agent;
-			slots = llListReplaceList(slots, [kSlots2Ava(NewSlot)], OldSlot, OldSlot);
-
-			// put the old agent into the new slot
-			//
-			NewSlot *= stride;
-			NewSlot += SLOTIDX_agent;
-			slots = llListReplaceList(slots, [oldslotagent], NewSlot, NewSlot);
-			llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
-		}
-}
-#endif  // _INLINE_SwapTwoSlots
-
-// old version would use the last seat for swapping when the agent
-// does not have a slot assigned, and the code indicates that this is
-// not intended
-//
-// new version does not swap when the agent does not have a slot
-// assigned or when the seat number is out of bounds
-//
-#define SwapAvatarInto(avatar, newseat)					\
-	int idx = LstIdx(slots, (avatar)) / (stride);			\
-									\
-	unless(boolInvalidSlotNo(idx))					\
-	{								\
-		SwapTwoSlots(iSlots2SeatNo(idx), (newseat));		\
-	}
-
-#define ReadCard()							\
-		lastStrideCount = slotMax;				\
-		slotMax = 0;						\
-		llRegionSay(chatchannel, "die");			\
-		llRegionSay(chatchannel, "adjuster_die");		\
-		line = 0;						\
-									\
-		if(llGetInventoryKey(card))				\
-			{						\
-				DEBUGmsg0("attempting to read card: '", card, "'", "uuid:", llGetInventoryKey(card), "line:", line); \
-									\
-				dataid = llGetNotecardLine(card, line);	\
-			}
 
 
 ProcessLine(string line, key av)
