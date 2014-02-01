@@ -21,7 +21,8 @@
 
 
 // This file contains functions from core.lsl which have been inlined
-// or can optionally be inlined.
+// or can optionally be inlined.  Inlining may use more or less script
+// memory, so test.
 
 
 #ifndef _CORE_INLINE
@@ -42,7 +43,7 @@
 
 // inlines SwapTwoSlots()
 //
-#define _INLINE_SwapTwoSlots
+// #define _INLINE_SwapTwoSlots
 
 
 ///////////////////////////////////////////////////////////////////////////

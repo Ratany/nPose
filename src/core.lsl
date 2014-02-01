@@ -35,40 +35,9 @@
 
 #include <common-slots.h>
 
+#include <core.h>
 #include <core-constants.h>
 #include <core-inline.h>
-
-
-int status;
-#define stADJUSTERS                1
-#define stEXPLICIT                 2
-
-
-#define Vec2Rot(_v)                llEuler2Rot((_v) * DEG_TO_RAD)
-#define boolIsAgent(_k)            (ZERO_VECTOR != llGetAgentSize(_k))
-
-#define boolInvalidSlotNo(_no)     (((_no) < 0) || ((_no) > slotMax))
-
-
-
-
-integer btnline;
-integer chatchannel;
-integer curPrimCount = 0;
-integer lastPrimCount = 0;
-integer lastStrideCount;
-integer line;
-integer slotMax = 0;
-
-key btnid;
-key clicker;
-key dataid;
-key hudId;
-
-string btncard;
-string card;
-
-list slots;
 
 
 ProcessLine(string line, key av)
