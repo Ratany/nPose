@@ -330,7 +330,7 @@ default
 				// length is irrelevant
 				//
 				// if(llGetListLength(slots) / stride >= 2)
-				when(2 < slotMax)
+				when(slotMax > 1)
 					{
 						DEBUGmsg3("swapping some of", slotMax, "slots");
 						list seats2Swap = llParseString2List(str, [","], []);
