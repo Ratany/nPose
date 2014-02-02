@@ -22,8 +22,10 @@
 
 #define DEBUG0 0  // anims
 #define DEBUG1 0  // stopping anims
+#define DEBUG2 0  // stopping anims
 
 
+#define _STD_DEBUG_USE_TIME
 #define _STD_DEBUG_PUBLIC
 
 
