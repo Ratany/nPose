@@ -238,19 +238,23 @@ DoMenu_AccessCtrl(key toucher, string path, string menuPrompt, integer page) //c
 
 	if(toucher == llGetOwner())
 		{
+			DEBUGmsg0("toucher is owner");
 			if((llListFindList(victims, [(string)llGetOwner()]) != -1 && vicGetsMenu == "on") || llListFindList(victims, [(string)llGetOwner()]) == -1)
 				{
 					//owner always gets authorized if not a victim, or if they are a victim and vicGetsMenu option is turned on
 					authorized = TRUE;
+					DEBUGmsg0("owner is not victimized");
 				}
 		}
 	else
 		if(((llList2String(Permissions, 0) == GROUP) && (llSameGroup(toucher))) || (llList2String(Permissions, 0) == PUBLIC))
 			{
-				if(llListFindList(victims, [(string)toucher]) == -1 && vicGetsMenu == "on")
+				DEBUGmsg0("toucher is NOT owner:", llGetUsername(toucher));
+				if(llListFindList(victims, [(string)toucher]) == -1 || vicGetsMenu == "on")
 					{
 						//returns '-1' if not found in victims list and option is turned off.. if found, do not authorize
 						authorized = TRUE;
+						DEBUGmsg0("toucher is victim but gets the menu:", llGetUsername(toucher));
 					}
 			}
 
