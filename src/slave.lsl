@@ -20,8 +20,11 @@
 // allowed by the platform.
 
 
-#define DEBUG0 0  // doseats()
+#define DEBUG0 0  // anims
+#define DEBUG1 0  // stopping anims
 
+
+#define _STD_DEBUG_PUBLIC
 
 
 #include <lslstddef.h>
@@ -42,9 +45,6 @@ int status = 0;
 #define stDOSYNC                   1
 #define stFACE_ANIM_DOING          2
 #define stFACE_ANIM_GOT            3
-
-
-
 
 
 // chatchannel depends on llGetKey(), should be optimized
@@ -90,13 +90,15 @@ string lastAnimRunning;
 
 
 list adjusters = [];
-list animsList; //[string command, string animation name]  use a list to layer multiple animations.
-list avatarOffsets;
+list avatarOffsets;  // agent uuid, vector offset
 list faceTimes = [];
 list faceanims;
 list lastanim;
 list slots;
 
+
+// #define DEBUG_Showanimslist
+#include <slave-animslist.h>
 
 
 // MoveLinkedAv(), inlined saves over 1056 byes
@@ -139,7 +141,6 @@ integer AvLinkNum(key av)
 			--linkcount;
 		}
 
-	DEBUGmsg0("agent linknum:", (linkcount * ((k == av) - (k != av))));
 	return (linkcount * ((k == av) - (k != av)));
 }
 // (put into getlinknumbers.lsl)
@@ -206,20 +207,20 @@ void doSeats(integer slotNum, key avKey)
 
 
 
-RezNextAdjuster()
-{
-	llRezObject("Adjuster", llGetPos() + <0, 0, 1>, ZERO_VECTOR, llGetRot(), chatchannel);
-}
+#define RezNextAdjuster()						\
+	llRezObject("Adjuster", llGetPos() + <0, 0, 1>, ZERO_VECTOR, llGetRot(), chatchannel)
 
-ChatAdjusterPos(integer slotnum)
-{
-	integer index = slotnum * stride;
-	vector pos = llGetPos() + llList2Vector(slots, index + 1) * llGetRot();
-	rotation rot = llList2Rot(slots, index + 2) * llGetRot();
-	string out = llList2String(adjusters, slotnum) + "|posrot|" + (string)pos + "|" + (string)rot;
-//    llOwnerSay("chatting out: " + out);
-	llRegionSay(chatchannel, out);
-}
+
+#define ChatAdjusterPos(slotnum)					\
+	{								\
+		rotation rot = llGetRot();				\
+		integer index = (slotnum) * stride;			\
+		vector pos = llGetPos() + llList2Vector(slots, index + 1) * rot; \
+		rot = llList2Rot(slots, index + 2) * rot;		\
+		string out = llList2String(adjusters, slotnum) + "|posrot|" + (string)pos + "|" + (string)rot; \
+		llRegionSay(chatchannel, out);				\
+	}
+
 
 default
 {
@@ -227,7 +228,7 @@ default
 		{
 			afootell(concat(concat(llGetScriptName(), " "), VERSION));
 
-			llMessageLinked(LINK_SET, 999999, "", "");
+			llMessageLinked(LINK_SET, SEND_CHATCHANNEL, "", "");
 			primcount = llGetNumberOfPrims();
 			newprimcount = primcount;
 		}
@@ -237,103 +238,109 @@ default
 			if(num == 1)    //got chatchannel from the core.
 				{
 					chatchannel = (integer)str;
+					DEBUGmsg0("chat channel:", chatchannel);
+					return;
 				}
 
 			if(num == layerPose)
 				{
-					key av;
-					list tempList = llParseString2List(str, ["/"], []);
+					DEBUGmsg0("layer pose message rcvd:", str);
 
-					if(sits(llList2Key(tempList, 0)))
+					key av = llList2Key(llParseString2List(str, ["/"], []), 0);
+
+					if(!sits(av))
 						{
-							av = (key)llList2String(tempList, 0);
+							DEBUGmsg0(av, "is not sitting");
+							//
+							//
+							// delete from anims list!!
+							//
+							//
+							//
+							//
+							//
+							return;
 						}
 
-					if(av)
+					llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
+
+					// Returns the key of the avatar that last granted or declined
+					// permissions to the script.
+					//
+					// --> That can be anyone ...
+					//
+					// av = llGetPermissionsKey();
+					if(llGetPermissionsKey() != av)
 						{
-							llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
-							av = llGetPermissionsKey();
-							list tempList1 = llParseString2List(llList2String(tempList, 1), ["~"], []);
-							integer instruction;
-							integer layerStop = llGetListLength(tempList1);
+							ERRORmsg("unexpected agent change");
+							return;
+						}
 
-							for(instruction = 0; instruction < layerStop; ++instruction)
+					// starting and stopping animations can only be done when permissions
+					// have been granted
+					//
+					bool hasperms = (llGetPermissions() & PERMISSION_TRIGGER_ANIMATION);
+
+					list tempList1 = llParseString2List(llList2String(llParseString2List(str, ["/"], []), 1), ["~"], []);
+					integer n;  // instruction
+					integer layerStop = llGetListLength(tempList1);
+
+
+					for(n = 0; n < layerStop; ++n)
+						{
+							list tempList = llParseString2List(llList2String(tempList1, n), [","], []);
+
+#define tmpCMD                     llList2String(tempList, 0)
+#define tmpANIM                    llList2String(tempList, 1)
+
+							string cmd = tmpCMD;
+
+							if(cmd == "stopAll")
 								{
-									tempList = llParseString2List(llList2String(tempList1, instruction), [","], []);
+									// see slave-animslist.h
+									//
+									inlineAnimsStopAll(av);
+									return;
+								}
 
-									if(llList2String(tempList, 0) == "stopAll")
+							when(cmd == "stop")
+								{
+									when(hasperms)
+									{
+										DEBUGmsg1("stop single anim:", tmpANIM);
+										llStopAnimation(tmpANIM);
+									}
+									else
 										{
-											animsList = [av, llList2String(tempList, 0), llList2String(tempList, 1)] + animsList;
+											ERRORmsg("missing perms");
+										}
+								}
+							else
+								{
+									when(cmd == "start")
+										{
+											when(hasperms)
+											{
+												DEBUGmsg1("start single anim:", tmpANIM);
+												llStartAnimation(tmpANIM);
+											}
+											else
+												{
+													ERRORmsg("missing perms");
+												}
 										}
 									else
 										{
-											integer index = llListFindList(animsList, [llList2String(tempList, 1)]);
-
-											if(index >= 1 & (key)llList2String(animsList, index - 2) == av)
-												{
-													animsList = llDeleteSubList(animsList, index - 2, index);
-												}
-
-											animsList += [av, llList2String(tempList, 0), llList2String(tempList, 1)];
-										}
-								}
-
-							integer n;
-							layerStop = llGetListLength(animsList) / 3;
-
-							for(n = 0; n < layerStop; ++n)
-								{
-									if((key)llList2String(animsList, n * 3) == av)
-										{
-											if(llList2String(animsList, n * 3 + 1) == "stopAll")
-												{
-													animsList = llDeleteSubList(animsList, n * 3, n * 3 + 2);
-													n -= 1;
-													layerStop -= 1;
-													integer x;
-													integer animsStop = llGetListLength(animsList) / 3;
-
-													if(animsStop > 0)
-														{
-															for(x = 0; x < animsStop; ++x)
-																{
-																	if((key)llList2String(animsList, x * 3) == av && llList2String(animsList, x * 3 + 2) != "")
-																		{
-																			llStopAnimation(llList2String(animsList, x * 3 + 2));
-																			animsList = llDeleteSubList(animsList, x * 3, x * 3 + 2);
-																			x -= 1;
-																			animsStop -= 1;
-																		}
-																}
-														}
-												}
-											else
-												if(llList2String(animsList, n * 3 + 1) == "start" && llList2String(animsList, n * 3) == av
-												   && llList2String(animsList, n * 3 + 2) != "")
-													{
-														if(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION)
-															{
-																llStartAnimation(llList2String(animsList, n * 3 + 2));
-															}
-													}
-												else
-													if(llList2String(animsList, n * 3 + 1) == "stop")
-														{
-															if(llGetPermissions() & PERMISSION_TRIGGER_ANIMATION)
-																{
-																	llStopAnimation(llList2String(animsList, n * 3 + 2));
-																	animsList = llDeleteSubList(animsList, n * 3, n * 3 + 2);
-																	n -= 1;
-																	layerStop -= 1;
-																}
-														}
+											ERRORmsg("unknown cmd");
 										}
 								}
 						}
+#undef tmpCMD
+#undef tmpANIM
 
-					//            llSay(0, "anim list:\n" + llList2CSV(llGetAnimationList(av)));
-				}
-			else
+					return;
+				}  // num == LayerPose
+
 				if((num == ADJUSTOFFSET) || (num == SETOFFSET))
 					{
 						vector $_ = (vector)str;
@@ -521,9 +528,11 @@ default
 		}
 
 
-	run_time_permissions(integer perm)
-		{
-			thisAV = llGetPermissionsKey();
+	event run_time_permissions(integer perm)
+	{
+		DEBUGmsg0("runtime perms triggered");
+
+		thisAV = llGetPermissionsKey();
 
 			IfNStatus(stFACE_ANIM_DOING)
 			{
@@ -741,9 +750,9 @@ default
 		{
 			if(change & CHANGED_LINK)
 				{
-					//            animsList=[];
 					integer newPrimCount1 = llGetNumberOfPrims();
 
+#if 0
 					if(newprimcount > newPrimCount1)
 						{
 							//we have lost a sitter so find out who and remove them from the list.
@@ -765,13 +774,13 @@ default
 										}
 								}
 						}
+#endif
 
 					newprimcount = newPrimCount1;
 
 					if(newprimcount == primcount)
 						{
 							//no AV's seated so clear the lastanim list.  done so we can detect LL's default Sit when reseating.
-							//                animsList=[];
 							lastanim = [];
 							currentanim = "";
 							lastAnimRunning = "";

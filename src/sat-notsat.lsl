@@ -19,6 +19,8 @@
 // perms" will mean the most permissive possible set of permissions
 // allowed by the platform.
 
+#include <lslstddef.h>
+
 #include <avn/sat-notsat.h>
 
 

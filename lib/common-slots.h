@@ -66,7 +66,9 @@
 			 opf("ava :", kSlots2Ava($_));			\
 			 opf("sat :", sSlots2Satmsg($_));		\
 			 opf("not :", sSlots2Notsat($_));		\
-			 opf("seat:", sSlots2Seat($_)));		\
+			 opf("seat:", sSlots2Seat($_))			\
+			 );						\
+									\
 		if(Onlst(_l, llGetOwner()))				\
 			{						\
 				opf("\towner on list");			\

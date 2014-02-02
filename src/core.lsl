@@ -277,7 +277,7 @@ default
 				// randomly resetting may cause timing issues
 				//
 				llMessageLinked(LINK_SET, 1, (string)chatchannel, NULL_KEY);
-				ERRORmsg("reset denied, channel sent");
+				ERRORmsg("reset denied");
 			}
 
 		if(num == DOPOSE)
