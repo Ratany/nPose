@@ -35,6 +35,7 @@
 #define DOACTIONS                  207
 #define DOPOSE                     200
 #define DUMP                       204
+#define SEND_CHATCHANNEL        999999
 #define SETOFFSET                  209
 #define STOPADJUST                 205
 #define SWAP                       202

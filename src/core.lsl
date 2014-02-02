@@ -272,9 +272,12 @@ default
 	{
 		DEBUG_TellMemory("linkmsg");
 
-		if(num == 999999)  //slave has asked me to reset so it can get the chatchannel from me.
+		if(num == SEND_CHATCHANNEL)  //slave has asked me to reset so it can get the chatchannel from me.
 			{
-				llResetScript();
+				// randomly resetting may cause timing issues
+				//
+				llMessageLinked(LINK_SET, 1, (string)chatchannel, NULL_KEY);
+				ERRORmsg("reset denied, channel sent");
 			}
 
 		if(num == DOPOSE)
