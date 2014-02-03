@@ -357,7 +357,7 @@ default
 
 												 // doSeats() triggers runtimeperms-event by requesting perms
 												 //
-												 doSeats(seatcount, agent);
+												 doSeats($_, agent);
 												 return;
 											 }
 									 }
