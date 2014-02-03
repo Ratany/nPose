@@ -28,8 +28,8 @@
 
 // #define _STD_DEBUG_USE_TIME
 // #define _STD_DEBUG_PUBLIC
-#define DEBUG_ShowSlots
-#define DEBUG_ShowSlots_Sittersonly
+// #define DEBUG_ShowSlots
+// #define DEBUG_ShowSlots_Sittersonly
 
 
 #include <lslstddef.h>
@@ -251,7 +251,7 @@ default
 
 	event link_message(integer sender, integer num, string str, key id)
 	{
-		if(iSLOTINFO == num)
+		if(iSLOTINFO_ALL == num)
 			{
 				// process transfer of slots list
 				//
@@ -558,30 +558,59 @@ default
 				return;
 			}
 
+		// this is being relayed from the core
+		//
 		if(num == 3)      //heard from an adjuster so a new position must be used, upate slots and chat out new position.
 			{
 				integer index = llListFindList(adjusters, [id]);
 
-				if(index != -1)
+				unless(iIsUndetermined(index))
 					{
-						string primName = llGetObjectName();
-						llSetObjectName(llGetLinkName(1));
+						// string primName = llGetObjectName();
+						// llSetObjectName(llGetLinkName(1));
+
 						list params = llParseString2List(str, ["|"], []);
-						vector newpos = (vector)llList2String(params, 0) - llGetPos();
-						newpos = newpos / llGetRot();
+
+						vector newpos = ForceList2Vector(params, 0) - llGetPos();
+						newpos /= llGetRot();
+
 						integer slotsindex = index * stride;
-						rotation newrot = (rotation)llList2String(params, 1) / llGetRot();
-						slots = llListReplaceList(slots, [newpos, newrot], slotsindex + 1, slotsindex + 2);
-						llRegionSayTo(llGetOwner(), 0, "\nANIM|" + llList2String(slots, slotsindex) + "|" + (string)newpos + "|" +
-							      (string)(llRot2Euler(newrot) * RAD_TO_DEG) + "|" + llList2String(slots, slotsindex + 3));
-						llSetObjectName(primName);
+						rotation newrot = ForceList2Rot(params, 1) / llGetRot();
+
+						list stridecopy = ySlotsStridecopy(slots, index);
+						ySlotsStrideDelete(slots, index);
+
+						stridecopy = llListReplaceList(stridecopy, [newpos, newrot], SLOTIDX_position, SLOTIDX_rot);
+						ySlotsAddStride(stridecopy, slots);
+
+#if 0
+						llRegionSayTo(llGetOwner(), 0, "ANIM|" + llList2String(slots, slotsindex) + "|" + (string)newpos + "|" +
+							      (string)(llRot2Euler(newrot) * RAD_TO_DEG) + "|" + llList2String(slots, slotsindex + 3) + " --> '" + sSlots2Seat(index) + "'");
+#endif
+
+						slotsindex = Len(slots) / stride - 1;
+						virtualinlinePrintSingleSlot(slots, slotsindex);
+						// llSetObjectName(primName);
+
+#if 0
+						// can´t use that here anyway because the slave would hear itself
+						//
 						llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
 						//gotta send a message back to the core other than with seatupdate so the core knows it came from here and updates slots list there.
 						llMessageLinked(LINK_SET, (seatupdate + 2000000), llDumpList2String(slots, "^"), NULL_KEY);
+#endif
+						// Send only the one slot that has actually changed.
+						//
+						virtualSendSlotSingle(slots, index);
+
+						//
+						// THE MENU-VIC PROBABLY NEEDS THE UPDATE, TOO --- HAVE TO LOOK INTO THAT LATER
+						//
 					}
 
 				return;
 			}
+		// /
 
 		if(num == 204)
 			{
@@ -634,94 +663,94 @@ default
 
 
 		IfNStatus(stFACE_ANIM_DOING)
+		{
+			//get the current requested animation from list slots.
+			integer avIndex = llListFindList(slots, [thisAV]);
+			currentanim = llList2String(slots, avIndex - 4);
+			//look for the default LL 'Sit' animation.  We must stop this animation if it is running. New Sitter!
+			list animsRunning = llGetAnimationList(thisAV);
+			integer indexx = llListFindList(animsRunning, [(key)"1a5fe8ac-a804-8a5d-7cbd-56bd83184568"]);
+			//we also need to know the last animation running.  Not New Sitter!
+			//lastanim is a 2 stride list [thisAV, last active animation name]
+			//index thisAV as a string in the list and then we can find the last animation.
+			integer thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
+
+			IfNStatus(stDOSYNC)
 			{
-				//get the current requested animation from list slots.
-				integer avIndex = llListFindList(slots, [thisAV]);
-				currentanim = llList2String(slots, avIndex - 4);
-				//look for the default LL 'Sit' animation.  We must stop this animation if it is running. New Sitter!
-				list animsRunning = llGetAnimationList(thisAV);
-				integer indexx = llListFindList(animsRunning, [(key)"1a5fe8ac-a804-8a5d-7cbd-56bd83184568"]);
-				//we also need to know the last animation running.  Not New Sitter!
-				//lastanim is a 2 stride list [thisAV, last active animation name]
-				//index thisAV as a string in the list and then we can find the last animation.
-				integer thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
-
-				IfNStatus(stDOSYNC)
-				{
-					if(indexx != -1)
-						{
-							lastAnimRunning = "Sit";
-							lastanim += [(string)thisAV, "Sit"];
-						}
-
-					if(thisAvIndex != -1)
-						{
-							lastAnimRunning = llList2String(lastanim, thisAvIndex + 1);
-						}
-
-					//now we know which animation to stop so go ahead and stop it.
-					if(lastAnimRunning != "")
-						{
-							llStopAnimation(lastAnimRunning);
-						}
-
-					thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
-					//now that we have the name of the last animation running, we can update the list with current animation.
-					lastanim = llListReplaceList(lastanim, [(string)thisAV, currentanim], thisAvIndex, thisAvIndex + 1);
-
-					if(avIndex != -1)
-						{
-							llStartAnimation(currentanim);
-						}
-				}
-				else
+				if(indexx != -1)
 					{
-						llStopAnimation(currentanim);
-						llStartAnimation("sit");
-						llSleep(0.05);
-						llStopAnimation("sit");
+						lastAnimRunning = "Sit";
+						lastanim += [(string)thisAV, "Sit"];
+					}
+
+				if(thisAvIndex != -1)
+					{
+						lastAnimRunning = llList2String(lastanim, thisAvIndex + 1);
+					}
+
+				//now we know which animation to stop so go ahead and stop it.
+				if(lastAnimRunning != "")
+					{
+						llStopAnimation(lastAnimRunning);
+					}
+
+				thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
+				//now that we have the name of the last animation running, we can update the list with current animation.
+				lastanim = llListReplaceList(lastanim, [(string)thisAV, currentanim], thisAvIndex, thisAvIndex + 1);
+
+				if(avIndex != -1)
+					{
 						llStartAnimation(currentanim);
 					}
 			}
-
-			//start timer if we have face anims for any slot
-			IfStatus(stFACE_ANIM_GOT)
-			{
-				llSetTimerEvent(1.0);
-				SetStatus(stFACE_ANIM_DOING);
-			}
 			else
 				{
-					llSetTimerEvent(0.0);
-					UnStatus(stFACE_ANIM_DOING);
+					llStopAnimation(currentanim);
+					llStartAnimation("sit");
+					llSleep(0.05);
+					llStopAnimation("sit");
+					llStartAnimation(currentanim);
 				}
-
-
-			//check all the slots for next seated AV, call for next seated AV to move and animate.
-
-			// Apparently this is what was intended here --- but what exactly means "next seated AV"?
-			// This would have to go by seat numbers maybe, since there is no particular order to
-			// the sitting agents other than their seat numbers as they are in the slots list.
-			//
-			int $_ = LstIdx(slots, thisAV);
-			unless(iIsUndetermined($_))
-				{
-					$_ /= stride;
-					while($_ < Len(slots))
-						{
-							++$_;
-							if(kSlots2Ava($_))
-								{
-									if(kSlots2Ava($_) != thisAV)
-										{
-											doSeats($_, kSlots2Ava($_));
-											return;
-										}
-								}
-						}
-				}
-			// /
 		}
+
+		//start timer if we have face anims for any slot
+		IfStatus(stFACE_ANIM_GOT)
+		{
+			llSetTimerEvent(1.0);
+			SetStatus(stFACE_ANIM_DOING);
+		}
+		else
+			{
+				llSetTimerEvent(0.0);
+				UnStatus(stFACE_ANIM_DOING);
+			}
+
+
+		//check all the slots for next seated AV, call for next seated AV to move and animate.
+
+		// Apparently this is what was intended here --- but what exactly means "next seated AV"?
+		// This would have to go by seat numbers maybe, since there is no particular order to
+		// the sitting agents other than their seat numbers as they are in the slots list.
+		//
+		int $_ = LstIdx(slots, thisAV);
+		unless(iIsUndetermined($_))
+			{
+				$_ /= stride;
+				while($_ < Len(slots))
+					{
+						++$_;
+						if(kSlots2Ava($_))
+							{
+								if(kSlots2Ava($_) != thisAV)
+									{
+										llRequestPermissions(kSlots2Ava($_), flagPERMS);
+										return;
+									}
+							}
+					}
+			}
+		// /
+	}
 
 	timer()
 		{

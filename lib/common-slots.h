@@ -50,6 +50,11 @@
 #define sSlots2Satmsg(_strideidx)       llList2String   (slots, SLOTIDX_satmsg   + stride * (_strideidx))
 #define sSlots2Notsat(_strideidx)       llList2String   (slots, SLOTIDX_notsat   + stride * (_strideidx))
 #define sSlots2Seat(_strideidx)         llList2String   (slots, SLOTIDX_seatno   + stride * (_strideidx))
+
+// same as sSlots2Seat(), for any list specified in params
+//
+#define sSomeSlots2Seat(_l, _strideidx) llList2String   (_l, SLOTIDX_seatno   + stride * (_strideidx))
+
 #define iSlots2SeatNo(_strideidx)       ((int)Endstr(sSlots2Seat(_strideidx), 4))
 
 
@@ -65,6 +70,18 @@
 
 
 
+#define virtualinlinePrintSingleSlot(_list, _slotnum)			\
+	DEBUGmsg("---------- stride:", _slotnum, "of", Len(_list) / stride, "----------"); \
+	opf("pose:", sSlots2Pose(_slotnum));				\
+	opf("pos :", vSlots2Position(_slotnum));			\
+	opf("rot :", rSlots2Rot(_slotnum));				\
+	opf("face:", sSlots2Facials(_slotnum));				\
+	opf("ava :", kSlots2Ava(_slotnum));				\
+	opf("sat :", sSlots2Satmsg(_slotnum));				\
+	opf("not :", sSlots2Notsat(_slotnum));				\
+	opf("seat:", sSlots2Seat(_slotnum))
+
+
 
 #ifdef DEBUG_ShowSlots
 #ifdef DEBUG_ShowSlots_Sittersonly
@@ -74,15 +91,7 @@
 		LoopDown($_,						\
 			 if(kSlots2Ava($_))				\
 				 {					\
-					 DEBUGmsg("---------- stride:", $_, "of", Len(_l) / stride, "----------"); \
-					 opf("pose:", sSlots2Pose($_));	\
-					 opf("pos :", vSlots2Position($_)); \
-					 opf("rot :", rSlots2Rot($_));	\
-					 opf("face:", sSlots2Facials($_)); \
-					 opf("ava :", kSlots2Ava($_));	\
-					 opf("sat :", sSlots2Satmsg($_)); \
-					 opf("not :", sSlots2Notsat($_)); \
-					 opf("seat:", sSlots2Seat($_));	\
+					 virtualinlinePrintSingleSlot(_l, $_); \
 				 }					\
 			 );						\
 									\
@@ -183,8 +192,17 @@
 		    sToSlotsSeat(_lsrc, 0)				\
 									])
 
+// get a copy of one slot-stride
+//
+#define ySlotsStridecopy(_lsrc, _slotnum)    llList2List(_lsrc, (_slotnum) * stride, (_slotnum) * stride + stride - 1)
 
-// Sending the slots list in one pice is a problem for all recipients.
+
+// delete one slot-stride
+//
+#define ySlotsStrideDelete(_l, _slotnum)     (_l = llDeleteSubList(_l, (_slotnum) * stride, (_slotnum) * stride + stride - 1))
+
+
+// Sending the slots list in one piece is a problem for all recipients.
 // Recipients get a long string and have no choice but to parse it
 // into a list from which the slots list is created as a copy.  Simply
 // parsing the string into a slots list and then converting that list
@@ -208,7 +226,17 @@
 
 // number to identify the type of message
 //
-#define iSLOTINFO                  16384
+// update of whole slots list
+//
+#define iSLOTINFO_ALL              16384
+
+
+// number to identify the type of message
+//
+// update of ONE STRIDE of the slots list
+//
+#define iSLOTINFO_SINGLE           16385
+
 
 // protocol: identifier for starting a sequence
 //
@@ -228,18 +256,52 @@
 #define protSLOTINFO_end           "slotsend"
 
 
+// send a full slots update, whole list, one slot after the other
+//
+// recipients should not act upon the update before it is completed
+//
 #define virtualSendSlotUpdate(_l)					\
 	{								\
-		llMessageLinked(lnSLOTS_RCVR, seatupdate, llDumpList2String(_l, "^"), NULL_KEY); \
-		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO, protSLOTINFO_start, NULL_KEY);	\
+		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, protSLOTINFO_start, NULL_KEY); \
 		int $_ = Len(_l) / stride;				\
 		LoopDown($_,						\
-			 DEBUGmsg3("sending slot:", llDumpList2String(llList2List(_l, $_ * (stride), $_ * (stride) + (stride) - 1), "^")); \
-			 llMessageLinked(lnSLOTS_RCVR, iSLOTINFO, llDumpList2String(llList2List(_l, $_ * (stride), $_ * (stride) + (stride) - 1), "^"), NULL_KEY) \
+			 DEBUGmsg3("sending slot:", llDumpList2String(llList2List(_l, $_ * stride, $_ * stride + stride - 1), "^")); \
+			 llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, llDumpList2String(llList2List(_l, $_ * stride, $_ * stride + stride - 1), "^"), NULL_KEY) \
 			 );						\
-		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO, protSLOTINFO_end, NULL_KEY); \
+		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, protSLOTINFO_end, NULL_KEY); \
+		llMessageLinked(lnSLOTS_RCVR, seatupdate, llDumpList2String(_l, "^"), NULL_KEY); \
 	}
 
+
+// virtualSendSlotSingle() and virtualReceiveSlotSingle() are for the
+// update of a single slot only!  To update the whole list, use
+// virtualSendSlotUpdate()!
+//
+//
+// send a single slot as update
+//
+#define virtualSendSlotSingle(_lsrc, _slotnum)				\
+	llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_SINGLE, llDumpList2String(llList2List(_lsrc, (_slotnum) * stride, (_slotnum) * stride + stride - 1), "^"), NULL_KEY)
+//
+//
+// receive an update for a single slot
+//
+// goes into the linked_message() event as is
+// requires that seat numbers are uniq
+//
+#define virtualReceiveSlotSingle(_sfrom, _ldest, $_i)			\
+	if(iSLOTINFO_SINGLE == ($_i))					\
+		{							\
+			list $_l = llParseStringKeepNulls(_sfrom, ["^"], []); \
+			int $_slotnum = LstIdx(_ldest, sSomeSlots2Seat($_l, 0)); \
+			unless(iIsUndetermined($_slotnum))		\
+				{					\
+					$_slotnum /= stride;		\
+					ySlotsStrideDelete(_ldest, $_slotnum); \
+					ySlotsAddStride($_l, _ldest);	\
+				}					\
+			return;						\
+		}
 
 
 

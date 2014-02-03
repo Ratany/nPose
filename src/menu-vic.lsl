@@ -20,6 +20,13 @@
 // allowed by the platform.
 
 
+
+// todo:
+//
+// see if slot updates are transmitted correctly
+//
+
+
 #define DEBUG0 0
 
 #include <lslstddef.h>

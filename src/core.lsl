@@ -351,8 +351,16 @@ default
 				return;
 			}
 
+		// receive an update for a single slot
+		//
+		virtualReceiveSlotSingle(str, slots, num);
+
+		// this can hopefully be replaced with sending single slots to get
+		// only those that actually changed
+		//
 		if(num == (seatupdate + 2000000))
 			{
+#if 0
 				//slave sent slots list after adjuster moved the AV.  we need to keep our slots list up to date. replace slots list
 
 				list tempList = llParseStringKeepNulls(str, ["^"], []);
@@ -366,7 +374,14 @@ default
 										  llList2Key(tempList, slotNum * stride + 4), llList2String(tempList, slotNum * stride + 5),
 										  llList2String(tempList, slotNum * stride + 6), llList2String(tempList, slotNum * stride + 7)], slotNum * stride, slotNum * stride + 7);
 					}
-
+#endif
+				// Send a single slot instead!
+				//
+				// Do not send the whole list slot for slot because the core would
+				// receive its own messages!
+				//
+				SoundInvop;
+				ERRORmsg("method not supported");
 				return;
 			}
 
