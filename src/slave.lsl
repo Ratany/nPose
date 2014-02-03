@@ -140,7 +140,7 @@ void doSeats(integer slotNum, key avKey)
 			ERRORmsg("agent not linked");
 			return;
 		}
-	unless(avKey)
+	unless(avKey != NULL_KEY)
 	{
 		ERRORmsg("not an agent");
 		return;
@@ -148,14 +148,6 @@ void doSeats(integer slotNum, key avKey)
 
 
 	UnStatus(stFACE_ANIM_DOING);
-
-	llRequestPermissions(avKey, flagPERMS);
-
-	IfStatus(stDOSYNC)
-	{
-		return;
-	}
-
 
 	//
 	// Position and rotate the sitting agents according to
@@ -359,22 +351,26 @@ default
 
 						//we have our new list of AV's and positions so put them where they belong.  fire off the first seated AV and run time will do the rest.
 						//
-						// That´s why this is so awfully slow!
-						//
+						// That´s why this is so awfully slow!  Agents do not need to be repositioned and rotated to play a facial ...
+						// So do these agents first and worry about their faces later.
 						{
 							int $_ = Len(slots) / stride;
 							LoopDown($_,
 								 key agent = kSlots2Ava($_);
 								 if(agent)
 									 {
-										 UnStatus(stDOSYNC);
-
 										 // doSeats() triggers runtimeperms-event by requesting perms
 										 //
+										 // <-- not anymore!
+										 //
 										 doSeats($_, agent);
-										 return;
 									 }
 								 );
+
+							// Once everyone is rotated and positioned, ask someone for perms.
+							//
+							$_ = Len(slots) / stride;
+							LoopDown($_, key agent = kSlots2Ava($_); if(agent) { llRequestPermissions(agent, flagPERMS); return; });
 						}
 
 						return;
@@ -516,10 +512,14 @@ default
 			{
 				SetStatus(stDOSYNC);
 				integer $_ = llGetListLength(slots) / 8;
+				LoopDown($_, key agent = kSlots2Ava($_); if(agent) { llRequestPermissions(agent, flagPERMS); doSeats($_, agent); });
 
-				// this insane because it triggers the runtime perms event
+				// after syncing is completed, unset the status
 				//
-				LoopDown($_, doSeats($_, kSlots2Ava($_)));
+				// Executing more code when explicitly syncing seems to be the only
+				// purpose for this status.
+				//
+				UnStatus(stDOSYNC);
 
 				return;
 			}
@@ -612,6 +612,8 @@ default
 
 	event run_time_permissions(integer perm)
 	{
+		thisAV = llGetPermissionsKey();
+
 		unless((llGetPermissions() & flagPERMS))
 			{
 				// message to self
@@ -620,7 +622,7 @@ default
 				//
 				// This is probably not sane due to design.
 				//
-				llMessageLinked(LINK_THIS, iUNSIT, (string)thisKey, NULL_KEY);
+				llMessageLinked(LINK_THIS, iUNSIT, (string)thisAV, NULL_KEY);
 				return;
 			}
 
@@ -630,9 +632,8 @@ default
 		}
 		ERRORmsg("runtime perms triggered");
 
-		thisAV = llGetPermissionsKey();
 
-			IfNStatus(stFACE_ANIM_DOING)
+		IfNStatus(stFACE_ANIM_DOING)
 			{
 				//get the current requested animation from list slots.
 				integer avIndex = llListFindList(slots, [thisAV]);
@@ -670,21 +671,17 @@ default
 
 					if(avIndex != -1)
 						{
-							if(sits(thisAV))
-								{
-									llStartAnimation(currentanim);
-								}
+							llStartAnimation(currentanim);
 						}
 				}
 				else
-					if(sits(thisAV))
-						{
-							llStopAnimation(currentanim);
-							llStartAnimation("sit");
-							llSleep(0.05);
-							llStopAnimation("sit");
-							llStartAnimation(currentanim);
-						}
+					{
+						llStopAnimation(currentanim);
+						llStartAnimation("sit");
+						llSleep(0.05);
+						llStopAnimation("sit");
+						llStartAnimation(currentanim);
+					}
 			}
 
 			//start timer if we have face anims for any slot
