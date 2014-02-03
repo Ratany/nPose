@@ -74,7 +74,7 @@ integer seatcount;
 
 // declared locally as well, purpose unknown
 //
-integer stop;
+// integer stop;
 
 
 
@@ -177,7 +177,7 @@ void doSeats(integer slotNum, key avKey)
 
 		// ouch?
 		//
-		stop = llGetListLength(slots) / 8;
+		// stop = llGetListLength(slots) / 8;
 
 		llRequestPermissions(avKey, PERMISSION_TRIGGER_ANIMATION);
 
@@ -503,6 +503,8 @@ default
 
 		if(num == iUNSIT)
 			{
+				// why not unsit directly?  This needs a slot update ...
+				//
 				llUnSit((key)str);
 
 				return;
@@ -511,13 +513,8 @@ default
 		if(num == SYNC)
 			{
 				SetStatus(stDOSYNC);
-				integer stop = llGetListLength(slots) / 8;
-
-				for(seatcount = 0; seatcount < stop; ++seatcount)
-					{
-						doSeats(seatcount, llList2String(slots, (seatcount) * 8 + 4));
-						return;
-					}
+				integer $_ = llGetListLength(slots) / 8;
+				LoopDown($_, doSeats($_, kSlots2Ava($_)));
 
 				return;
 			}
@@ -681,17 +678,31 @@ default
 					UnStatus(stFACE_ANIM_DOING);
 				}
 
-			//check all the slots for next seated AV, call for next seated AV to move and animate.
-			for(; seatcount < stop - 1;)
-				{
-					seatcount += 1;
 
-					if(llList2Key(slots, seatcount * 8 + 4) != "")
+			//check all the slots for next seated AV, call for next seated AV to move and animate.
+
+			// Apparently this is what was intended here --- but what exactly means "next seated AV"?
+			// This would have to go by seat numbers maybe, since there is no particular order to
+			// the sitting agents other than their seat numbers as they are in the slots list.
+			//
+			int $_ = LstIdx(slots, thisAV);
+			unless(iIsUndetermined($_))
+				{
+					$_ /= stride;
+					while($_ < Len(slots))
 						{
-							doSeats(seatcount, llList2String(slots, (seatcount) * 8 + 4));
-							return;
+							++$_;
+							if(kSlots2Ava($_))
+								{
+									if(kSlots2Ava($_) != thisAV)
+										{
+											doSeats($_, kSlots2Ava($_));
+											return;
+										}
+								}
 						}
 				}
+			// /
 		}
 
 	timer()
