@@ -55,8 +55,6 @@ ProcessLine(string line, key av)
 		{
 
 			DEBUGmsg2("test vector:", ForceList2Vector(params, 2));
-			// params[4] does not exist?
-			// inconsistent: slots[4] is a UUID, not a string
 
 			if(slotMax < lastStrideCount)
 				{
@@ -69,7 +67,7 @@ ProcessLine(string line, key av)
 			else
 				{
 					slots += [llList2String(params, 1), ForceList2Vector(params, 2),
-						  Vec2Rot(ForceList2Vector(params, 3)), llList2String(params, 4), "", "", "", "seat" + (string)(slotMax + 1)];
+						  Vec2Rot(ForceList2Vector(params, 3)), llList2Key(params, 4), "", "", "", "seat" + (string)(slotMax + 1)];
 
 					DEBUGmsg2("slots add, params    :", llList2CSV(params));
 				}
@@ -494,7 +492,8 @@ default
 						return;
 					}
 
-
+				// reading the notecard has ended
+				//
 				DEBUGmsg0("dataserver: EOF");
 				DEBUGmsg3("slotMax:", slotMax, "last stride count:", lastStrideCount);
 
