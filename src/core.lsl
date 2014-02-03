@@ -276,7 +276,10 @@ default
 			{
 				// randomly resetting may cause timing issues
 				//
+				// send chat channel instead and update slots
+				//
 				llMessageLinked(LINK_SET, 1, (string)chatchannel, NULL_KEY);
+				virtualSendSlotUpdate(slots);
 				ERRORmsg("reset denied");
 			}
 

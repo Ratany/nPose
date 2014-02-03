@@ -20,15 +20,16 @@
 // allowed by the platform.
 
 
-#define DEBUG0 0  // anims
+#define DEBUG0 0  // anims, seatupdate
 #define DEBUG1 0  // stopping anims
 #define DEBUG2 0  // stopping anims
-#define DEBUG3 1  // seatupdate
+#define DEBUG3 0  //
 
 
 // #define _STD_DEBUG_USE_TIME
 // #define _STD_DEBUG_PUBLIC
-// #define DEBUG_ShowSlots
+#define DEBUG_ShowSlots
+#define DEBUG_ShowSlots_Sittersonly
 
 
 #include <lslstddef.h>
@@ -257,7 +258,7 @@ default
 						//
 						// a sequence of slots will be received
 						//
-						DEBUGmsg3("rcv slots start");
+						DEBUGmsg0("rcv slots start");
 
 						slots = [];
 						SetStatus(stSLOTS_RCV);
@@ -269,7 +270,7 @@ default
 						//
 						// transmission of a sequence of slots has been completed
 						//
-						DEBUGmsg3("rcv slots end");
+						DEBUGmsg0("rcv slots end");
 
 						UnStatus(stSLOTS_RCV);
 
@@ -311,7 +312,7 @@ default
 										 if(sSlots2Facials($_))
 											 {
 												 list faceanimsTemp = llParseString2List(sSlots2Facials($_), ["~"], []);
-												 DEBUGmsg3("face anims temp:", llList2CSV(faceanimsTemp));
+												 DEBUGmsg0("face anims temp:", llList2CSV(faceanimsTemp));
 												 list faces = [];
 												 integer hasNewFaceTime = 0;
 												 integer nFace = Len(faceanimsTemp);
@@ -336,10 +337,12 @@ default
 												 SetStatus(stFACE_ANIM_GOT);
 												 //add sitter key and flag if timer defined followed by a stride 2 list containing face anim name and associated time
 												 faceTimes += ([kSlots2Ava($_), hasNewFaceTime, Len(faceanimsTemp)] + faces);
-												 DEBUGmsg3("adding to faceTimes:", llList2CSV([kSlots2Ava($_), hasNewFaceTime, Len(faceanimsTemp)] + faces));
+												 DEBUGmsg0("adding to faceTimes:", llList2CSV([kSlots2Ava($_), hasNewFaceTime, Len(faceanimsTemp)] + faces));
 											 }
 									 }
 								 );
+
+							DEBUG_virtualShowSlots(slots);
 
 						}
 
@@ -375,7 +378,7 @@ default
 					//
 					list thisslot = llParseStringKeepNulls(str, ["^"], []);
 
-					DEBUGmsg3("rcv a slot:", str);
+					DEBUGmsg0("rcv a slot:", str);
 					ySlotsAddStride(thisslot, slots);
 
 					return;

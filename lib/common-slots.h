@@ -67,6 +67,37 @@
 
 
 #ifdef DEBUG_ShowSlots
+#ifdef DEBUG_ShowSlots_Sittersonly
+#define DEBUG_virtualShowSlots(_l)					\
+	{								\
+		int $_ = Len(_l) / stride;				\
+		LoopDown($_,						\
+			 if(kSlots2Ava($_))				\
+				 {					\
+					 DEBUGmsg("---------- stride:", $_, "of", Len(_l) / stride, "----------"); \
+					 opf("pose:", sSlots2Pose($_));	\
+					 opf("pos :", vSlots2Position($_)); \
+					 opf("rot :", rSlots2Rot($_));	\
+					 opf("face:", sSlots2Facials($_)); \
+					 opf("ava :", kSlots2Ava($_));	\
+					 opf("sat :", sSlots2Satmsg($_)); \
+					 opf("not :", sSlots2Notsat($_)); \
+					 opf("seat:", sSlots2Seat($_));	\
+				 }					\
+			 );						\
+									\
+		if(Onlst(_l, llGetOwner()))				\
+			{						\
+				opf("\towner on list");			\
+			}						\
+		else							\
+			{						\
+				opf("\towner NOT on list");		\
+			}						\
+	}
+
+#else
+
 #define DEBUG_virtualShowSlots(_l)					\
 	{								\
 		int $_ = Len(_l) / stride;				\
@@ -91,10 +122,10 @@
 				opf("\towner NOT on list");		\
 			}						\
 	}
-// 		opf("CSV:", llList2CSV(_l));
-#else
+#endif  // DEBUG_ShowSlots_Sittersonly
+#else  // DEBUG_ShowSlots
 #define DEBUG_virtualShowSlots(...)
-#endif
+#endif  // DEBUG_ShowSlots
 
 
 // used in core
