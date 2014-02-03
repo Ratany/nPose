@@ -51,6 +51,7 @@ int status = 0;
 #define stFACE_ANIM_GOT            4
 #define stSLOTS_RCV                8
 #define stFACE_ENABLE             16
+#define stIGNORE_RT_PERMS         32
 
 
 // chatchannel depends on llGetKey(), should be optimized
@@ -104,33 +105,10 @@ list slots;
 #include <slave-animslist.h>
 
 
-// MoveLinkedAv(), inlined saves over 1056 byes
-//
-// does not work when the root prim is not linked?
-//
-// This is now part of doSeats()!
-//
-#define inlineMoveLinkedAv(linknum, avpos, avrot)			\
-	int avlinknum = AvLinkNum(avKey);				\
-	unless(avlinknum < 0)						\
-	{								\
-		vector size = llGetAgentSize(avKey);			\
-									\
-		rotation localrot = ZERO_ROTATION;			\
-		vector localpos = ZERO_VECTOR;				\
-									\
-		if(llGetLinkNumber() > 1)				\
-			{						\
-				localrot = llGetLocalRot();		\
-				localpos = llGetLocalPos();		\
-			}						\
-									\
-		avpos.z += 0.4;						\
-		SLPPF(linknum, [PRIM_POSITION, ((avpos - (llRot2Up(avrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, (avrot) * localrot / llGetRootRotation()]); \
-	}
-
+#define flagPERMS                  (PERMISSION_TRIGGER_ANIMATION)
 
 #define boolAvValidLinkNum(_agent) (!(AvLinkNum(_agent) < 0))
+
 
 // should be inlined
 //
@@ -148,44 +126,77 @@ integer AvLinkNum(key av)
 }
 // (put into getlinknumbers.lsl)
 
-
-#define inlineAppliedOffsets(n)						\
-	integer avinoffsets = LstIdx(avatarOffsets, kSlots2Ava(n));	\
-	vector vpos = vSlots2Position(n);				\
-									\
-	if(!iIsUndetermined(avinoffsets))				\
-		{							\
-			vpos += llList2Vector(avatarOffsets, avinoffsets + 1) * rSlots2Rot(n); \
-		}
-
+	// should check whether agent is sitting or not?
 
 void doSeats(integer slotNum, key avKey)
 {
 	// DEBUG_virtualShowSlots(slots);
 
+	int avlinknum = AvLinkNum(avKey);
+
+	// For now, I want to know either:
 	//
-	// should check whether agent is sitting or not?
-	//
-	// When agent is not sitting, their link number is
-	// undetermined.  To implement check, get link number first,
-	// so modify inlineAppliedOffsets().
-	//
-
-	when(avKey)
-	{
-		UnStatus(stFACE_ANIM_DOING);
-
-		// ouch?
-		//
-		// stop = llGetListLength(slots) / 8;
-
-		llRequestPermissions(avKey, PERMISSION_TRIGGER_ANIMATION);
-
-		IfNStatus(stDOSYNC)
+	when(avlinknum < 0)
 		{
-			inlineAppliedOffsets(slotNum);
-			inlineMoveLinkedAv(avlinknum, vpos, llList2Rot(slots, ((slotNum) * 8) + 2));
+			ERRORmsg("agent not linked");
+			return;
 		}
+	unless(avKey)
+	{
+		ERRORmsg("not an agent");
+		return;
+	}
+
+
+	UnStatus(stFACE_ANIM_DOING);
+
+	llRequestPermissions(avKey, flagPERMS);
+
+	IfNStatus(stDOSYNC)
+	{
+		//
+		// Position and rotate the sitting agents according to
+		// slots list and apparently to their personal offset.
+		//
+
+		integer avinoffsets = LstIdx(avatarOffsets, kSlots2Ava(slotNum));
+		vector agentpos = vSlots2Position(slotNum);
+
+		if(!iIsUndetermined(avinoffsets))
+			{
+				// add personal offset to agent position from slots list
+				//
+				agentpos += llList2Vector(avatarOffsets, avinoffsets + 1) * rSlots2Rot(slotNum);
+			}
+
+		rotation agentrot = rSlots2Rot(slotNum);
+		vector size = llGetAgentSize(avKey);
+
+		rotation localrot = ZERO_ROTATION;
+		vector localpos = ZERO_VECTOR;
+
+		if(llGetLinkNumber() > 1)
+			{
+				// use local rotation of the prim the script is in unless it´s the root prim
+				//
+				// This is probably bad because it screws up all adjustments when the script
+				// is moved from the root prim into another one?
+				//
+				// The root prim has a global rotation the local rotation is relative to, and
+				// the rotation of the root prim might _not_ be a ZERO_ROTATION as assumed above.
+				//
+				// Perhaps this needs to be 'llGetLocalRot() / llGetRootRotation()'.  Same goes
+				// for the position.
+				//
+				// Why are these global coordinates and rotations anyway, rather than positioning
+				// all agents always relative to the root prim, which seems to be much simpler?
+				//
+				localrot = llGetLocalRot();
+				localpos = llGetLocalPos();
+			}
+
+		agentpos.z += 0.4;
+		SLPPF(avlinknum, [PRIM_POSITION, ((agentpos - (llRot2Up(agentrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, agentrot * localrot / llGetRootRotation()]);
 	}
 }
 
@@ -345,21 +356,21 @@ default
 						}
 
 						//we have our new list of AV's and positions so put them where they belong.  fire off the first seated AV and run time will do the rest.
+						//
+						// That´s why this is so awfully slow!
+						//
 						{
 							int $_ = Len(slots) / stride;
 							LoopDown($_,
 								 key agent = kSlots2Ava($_);
 								 if(agent)
 									 {
-										 if(sits(agent))
-											 {
-												 UnStatus(stDOSYNC);
+										 UnStatus(stDOSYNC);
 
-												 // doSeats() triggers runtimeperms-event by requesting perms
-												 //
-												 doSeats($_, agent);
-												 return;
-											 }
+										 // doSeats() triggers runtimeperms-event by requesting perms
+										 //
+										 doSeats($_, agent);
+										 return;
 									 }
 								 );
 						}
@@ -405,14 +416,15 @@ default
 						return;
 					}
 
-				llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
+				SetStatus(stIGNORE_RT_PERMS);
+				llRequestPermissions(av, flagPERMS);
+				UnStatus(stIGNORE_RT_PERMS);
 
 				// Returns the key of the avatar that last granted or declined
 				// permissions to the script.
 				//
 				// --> That can be anyone ...
 				//
-				// av = llGetPermissionsKey();
 				if(llGetPermissionsKey() != av)
 					{
 						ERRORmsg("unexpected agent change");
@@ -422,7 +434,9 @@ default
 				// starting and stopping animations can only be done when permissions
 				// have been granted
 				//
-				bool hasperms = (llGetPermissions() & PERMISSION_TRIGGER_ANIMATION);
+				// Since agents not granting perms are unsat, it can be assumed that
+				// the permission has been granted.
+				//
 
 				list tempList1 = llParseString2List(llList2String(llParseString2List(str, ["/"], []), 1), ["~"], []);
 				integer n;  // instruction
@@ -448,29 +462,15 @@ default
 
 						when(cmd == "stop")
 							{
-								when(hasperms)
-								{
-									DEBUGmsg1("stop single anim:", tmpANIM);
-									llStopAnimation(tmpANIM);
-								}
-								else
-									{
-										ERRORmsg("missing perms");
-									}
+								DEBUGmsg1("stop single anim:", tmpANIM);
+								llStopAnimation(tmpANIM);
 							}
 						else
 							{
 								when(cmd == "start")
 									{
-										when(hasperms)
-										{
-											DEBUGmsg1("start single anim:", tmpANIM);
-											llStartAnimation(tmpANIM);
-										}
-										else
-											{
-												ERRORmsg("missing perms");
-											}
+										DEBUGmsg1("start single anim:", tmpANIM);
+										llStartAnimation(tmpANIM);
 									}
 								else
 									{
@@ -514,6 +514,9 @@ default
 			{
 				SetStatus(stDOSYNC);
 				integer $_ = llGetListLength(slots) / 8;
+
+				// this insane because it triggers the runtime perms event
+				//
 				LoopDown($_, doSeats($_, kSlots2Ava($_)));
 
 				return;
@@ -607,7 +610,23 @@ default
 
 	event run_time_permissions(integer perm)
 	{
-		DEBUGmsg0("runtime perms triggered");
+		unless((llGetPermissions() & flagPERMS))
+			{
+				// message to self
+				//
+				// core will update slots list on unsit
+				//
+				// This is probably not sane due to design.
+				//
+				llMessageLinked(LINK_THIS, iUNSIT, (string)thisKey, NULL_KEY);
+				return;
+			}
+
+		IfStatus(stIGNORE_RT_PERMS)
+		{
+			return;
+		}
+		ERRORmsg("runtime perms triggered");
 
 		thisAV = llGetPermissionsKey();
 
@@ -741,7 +760,7 @@ default
 										{
 											SetStatus(stFACE_ANIM_DOING);
 											thisAV = llGetPermissionsKey();
-											llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
+											llRequestPermissions(av, flagPERMS);
 										}
 								}
 
@@ -775,7 +794,7 @@ default
 									{
 										SetStatus(stFACE_ANIM_DOING);
 										thisAV = llGetPermissionsKey();
-										llRequestPermissions(av, PERMISSION_TRIGGER_ANIMATION);
+										llRequestPermissions(av, flagPERMS);
 									}
 
 								integer x;
