@@ -53,6 +53,19 @@
 #define iSlots2SeatNo(_strideidx)       ((int)Endstr(sSlots2Seat(_strideidx), 4))
 
 
+#define sToSlotsPose(_l, _strideidx)         llList2String   (_l, SLOTIDX_pose     + stride * (_strideidx))
+#define vToSlotsPosition(_l, _strideidx)     ForceList2Vector(_l, SLOTIDX_position + stride * (_strideidx))
+#define rToSlotsRot(_l, _strideidx)          ForceList2Rot   (_l, SLOTIDX_rot      + stride * (_strideidx))
+#define sToSlotsFacials(_l, _strideidx)      llList2String   (_l, SLOTIDX_facial   + stride * (_strideidx))
+#define kToSlotsAva(_l, _strideidx)          llList2Key      (_l, SLOTIDX_agent    + stride * (_strideidx))
+#define sToSlotsSatmsg(_l, _strideidx)       llList2String   (_l, SLOTIDX_satmsg   + stride * (_strideidx))
+#define sToSlotsNotsat(_l, _strideidx)       llList2String   (_l, SLOTIDX_notsat   + stride * (_strideidx))
+#define sToSlotsSeat(_l, _strideidx)         llList2String   (_l, SLOTIDX_seatno   + stride * (_strideidx))
+
+
+
+
+
 #ifdef DEBUG_ShowSlots
 #define DEBUG_virtualShowSlots(_l)					\
 	{								\
@@ -105,6 +118,98 @@
 //
 // / used in core
 //
+
+
+// Convert a stride of a slots list to a stride of a slots list to get
+// the data types right.  Requires lots of memory ...
+//
+#define ySlotsConvertStride(_lsrc, _strideofsrc, _ldest, _strideofdest)	\
+	(_ldest = llListReplaceList(_ldest,				\
+				    [					\
+				     sToSlotsPose(_lsrc, _strideofsrc),	\
+				     vToSlotsPosition(_lsrc, _strideofsrc), \
+				     rToSlotsRot(_lsrc, _strideofsrc),	\
+				     sToSlotsFacials(_lsrc, _strideofsrc), \
+				     kToSlotsAva(_lsrc, _strideofsrc),	\
+				     sToSlotsSatmsg(_lsrc, _strideofsrc), \
+				     sToSlotsNotsat(_lsrc, _strideofsrc), \
+				     sToSlotsSeat(_lsrc, _strideofsrc)	\
+									], \
+				    _strideofdest, (_strideofdest) + stride - 1))
+
+// Add stride 0 from a list _lsrc to a list _ldest.  Both lists are
+// slots lists.
+//
+#define ySlotsAddStride(_lsrc, _ldest)					\
+	(_ldest += [							\
+		    sToSlotsPose(_lsrc, 0),				\
+		    vToSlotsPosition(_lsrc, 0),				\
+		    rToSlotsRot(_lsrc, 0),				\
+		    sToSlotsFacials(_lsrc, 0),				\
+		    kToSlotsAva(_lsrc, 0),				\
+		    sToSlotsSatmsg(_lsrc, 0),				\
+		    sToSlotsNotsat(_lsrc, 0),				\
+		    sToSlotsSeat(_lsrc, 0)				\
+									])
+
+
+// Sending the slots list in one pice is a problem for all recipients.
+// Recipients get a long string and have no choice but to parse it
+// into a list from which the slots list is created as a copy.  Simply
+// parsing the string into a slots list and then converting that list
+// to get the data types right takes about 21kB for 30 slots.
+// Maintaining a duplicate of the list takes about four times as much
+// memory as the length of the string to build the lists because two
+// copies must be used, and building a list takes about two times the
+// memory the final list takes.
+//
+// Hence send the slots list one slot after the other instead of the
+// whole list in one piece.  All recipients should be updated to
+// receive the slots list slot by slot --- until then, use the current
+// method, and additionally send slot after slot.
+//
+// To send the slots list, use 'virtualSendSlotUpdate(slots);'.
+
+
+// link number to send the slots list to
+//
+#define lnSLOTS_RCVR               LINK_THIS
+
+// number to identify the type of message
+//
+#define iSLOTINFO                  16384
+
+// protocol: identifier for starting a sequence
+//
+// must be 8 characters
+//
+#define protSLOTINFO_start         "sltstart"
+
+
+// protocol: identifier for end of sequence
+//
+// Receivers must not operate with an incomplete slots list, so this
+// message indicates the end of the sequence started with
+// protSLOTINFO_start.
+//
+// must be 8 characters
+//
+#define protSLOTINFO_end           "slotsend"
+
+
+#define virtualSendSlotUpdate(_l)					\
+	{								\
+		llMessageLinked(lnSLOTS_RCVR, seatupdate, llDumpList2String(_l, "^"), NULL_KEY); \
+		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO, protSLOTINFO_start, NULL_KEY);	\
+		int $_ = Len(_l) / stride;				\
+		LoopDown($_,						\
+			 DEBUGmsg3("sending slot:", llDumpList2String(llList2List(_l, $_ * (stride), $_ * (stride) + (stride) - 1), "^")); \
+			 llMessageLinked(lnSLOTS_RCVR, iSLOTINFO, llDumpList2String(llList2List(_l, $_ * (stride), $_ * (stride) + (stride) - 1), "^"), NULL_KEY) \
+			 );						\
+		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO, protSLOTINFO_end, NULL_KEY); \
+	}
+
+
 
 
 #endif  // _COMMON_SLOTS

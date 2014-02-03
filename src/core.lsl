@@ -23,7 +23,7 @@
 #define DEBUG0 0  // card reading
 #define DEBUG1 0  // listener
 #define DEBUG2 0  // process line
-#define DEBUG3 0  // slotMax, assigning slots
+#define DEBUG3 0  // slotMax, assigning slots, sending slots
 
 // #define DEBUG_tellmem  // memory info
 // #define DEBUG_ShowSlots  // show slots and changes
@@ -568,9 +568,9 @@ default
 
 				DEBUG_virtualShowSlots(slots);
 
-				// this could be a problem when the message gets too long
+				// send slots list to other scripts
 				//
-				llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
+				virtualSendSlotUpdate(slots);
 
 				// card has been read and we have adjusters, send message to slave script.
 				//
@@ -636,7 +636,10 @@ default
 							 );
 
 						lastPrimCount = curPrimCount;
-						llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
+
+						// send slots list to other scripts
+						//
+						virtualSendSlotUpdate(slots);
 
 						return;
 					}
@@ -721,9 +724,9 @@ default
 
 							}
 
-						// this could be a problem when the message gets too long
+						// send slots list to other scripts
 						//
-						llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
+						virtualSendSlotUpdate(slots);
 
 						DEBUG_TellMemory("assign slots");
 					}
@@ -736,10 +739,15 @@ default
 				llResetScript();
 			}
 
+#if 0
 		if(change & CHANGED_REGION)
 			{
-				llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
+				// Why send a seatupdate on region changes?
+				//
+				virtualSendSlotUpdate(slots);
 			}
+#endif
+
 	}
 
 	event on_rez(integer param)
