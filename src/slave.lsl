@@ -50,6 +50,7 @@ int status = 0;
 #define stFACE_ANIM_DOING          2
 #define stFACE_ANIM_GOT            4
 #define stSLOTS_RCV                8
+#define stFACE_ENABLE             16
 
 
 // chatchannel depends on llGetKey(), should be optimized
@@ -84,9 +85,6 @@ key thisAV;
 //
 string currentanim;
 
-// might be a status
-//
-string facialEnable = "on";
 
 // can probably be local
 //
@@ -497,7 +495,8 @@ default
 
 		if(num == -241)
 			{
-				facialEnable = str;
+				bool on = (str == "on");
+				CompStatus(stFACE_ENABLE, on);
 
 				return;
 			}
@@ -697,10 +696,10 @@ default
 
 	timer()
 		{
-			when(facialEnable != "on")
-				{
-					return;
-				}
+			IfNStatus(stFACE_ENABLE)
+			{
+				return;
+			}
 
 			integer n;
 			integer stop = llGetListLength(slots) / 8;
