@@ -126,7 +126,6 @@ integer AvLinkNum(key av)
 }
 // (put into getlinknumbers.lsl)
 
-	// should check whether agent is sitting or not?
 
 void doSeats(integer slotNum, key avKey)
 {
@@ -152,52 +151,55 @@ void doSeats(integer slotNum, key avKey)
 
 	llRequestPermissions(avKey, flagPERMS);
 
-	IfNStatus(stDOSYNC)
+	IfStatus(stDOSYNC)
 	{
-		//
-		// Position and rotate the sitting agents according to
-		// slots list and apparently to their personal offset.
-		//
-
-		integer avinoffsets = LstIdx(avatarOffsets, kSlots2Ava(slotNum));
-		vector agentpos = vSlots2Position(slotNum);
-
-		if(!iIsUndetermined(avinoffsets))
-			{
-				// add personal offset to agent position from slots list
-				//
-				agentpos += llList2Vector(avatarOffsets, avinoffsets + 1) * rSlots2Rot(slotNum);
-			}
-
-		rotation agentrot = rSlots2Rot(slotNum);
-		vector size = llGetAgentSize(avKey);
-
-		rotation localrot = ZERO_ROTATION;
-		vector localpos = ZERO_VECTOR;
-
-		if(llGetLinkNumber() > 1)
-			{
-				// use local rotation of the prim the script is in unless it´s the root prim
-				//
-				// This is probably bad because it screws up all adjustments when the script
-				// is moved from the root prim into another one?
-				//
-				// The root prim has a global rotation the local rotation is relative to, and
-				// the rotation of the root prim might _not_ be a ZERO_ROTATION as assumed above.
-				//
-				// Perhaps this needs to be 'llGetLocalRot() / llGetRootRotation()'.  Same goes
-				// for the position.
-				//
-				// Why are these global coordinates and rotations anyway, rather than positioning
-				// all agents always relative to the root prim, which seems to be much simpler?
-				//
-				localrot = llGetLocalRot();
-				localpos = llGetLocalPos();
-			}
-
-		agentpos.z += 0.4;
-		SLPPF(avlinknum, [PRIM_POSITION, ((agentpos - (llRot2Up(agentrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, agentrot * localrot / llGetRootRotation()]);
+		return;
 	}
+
+
+	//
+	// Position and rotate the sitting agents according to
+	// slots list and apparently to their personal offset.
+	//
+
+	integer avinoffsets = LstIdx(avatarOffsets, kSlots2Ava(slotNum));
+	vector agentpos = vSlots2Position(slotNum);
+
+	if(!iIsUndetermined(avinoffsets))
+		{
+			// add personal offset to agent position from slots list
+			//
+			agentpos += llList2Vector(avatarOffsets, avinoffsets + 1) * rSlots2Rot(slotNum);
+		}
+
+	rotation agentrot = rSlots2Rot(slotNum);
+	vector size = llGetAgentSize(avKey);
+
+	rotation localrot = ZERO_ROTATION;
+	vector localpos = ZERO_VECTOR;
+
+	if(llGetLinkNumber() > 1)
+		{
+			// use local rotation of the prim the script is in unless it´s the root prim
+			//
+			// This is probably bad because it screws up all adjustments when the script
+			// is moved from the root prim into another one?
+			//
+			// The root prim has a global rotation the local rotation is relative to, and
+			// the rotation of the root prim might _not_ be a ZERO_ROTATION as assumed above.
+			//
+			// Perhaps this needs to be 'llGetLocalRot() / llGetRootRotation()'.  Same goes
+			// for the position.
+			//
+			// Why are these global coordinates and rotations anyway, rather than positioning
+			// all agents always relative to the root prim, which seems to be much simpler?
+			//
+			localrot = llGetLocalRot();
+			localpos = llGetLocalPos();
+		}
+
+	agentpos.z += 0.4;
+	SLPPF(avlinknum, [PRIM_POSITION, ((agentpos - (llRot2Up(agentrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, agentrot * localrot / llGetRootRotation()]);
 }
 
 
