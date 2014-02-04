@@ -603,6 +603,10 @@ default
 						//
 						virtualSendSlotSingle(slots, index);
 
+						// reposition the agent
+						//
+						doSeats(index, kSlots2Ava(index));
+
 						//
 						// THE MENU-VIC PROBABLY NEEDS THE UPDATE, TOO --- HAVE TO LOOK INTO THAT LATER
 						//
