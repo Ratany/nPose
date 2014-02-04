@@ -62,10 +62,6 @@ integer chatchannel;
 
 integer newprimcount;
 
-// must be initialized
-//
-integer nextAvatarOffset = 0;
-
 // ?
 integer primcount;
 
@@ -207,20 +203,15 @@ void doSeats(integer slotNum, key avKey)
 	{								\
 		avatarOffsets += [avatar, offset];			\
 									\
-		nextAvatarOffset += 2;					\
+		return;							\
 	}								\
-	else								\
+									\
+	if(offset)							\
 		{							\
+			offset += llList2Vector(avatarOffsets, avatarOffsetsIndex + 1);	\
+		}							\
 									\
-			if(offset)					\
-				{					\
-					offset += llList2Vector(avatarOffsets, avatarOffsetsIndex + 1);	\
-				}					\
-									\
-			avatarOffsets = llListReplaceList(avatarOffsets, [offset], avatarOffsetsIndex, avatarOffsetsIndex); \
-		}
-// can probably return rather than use else once concatenated if/elses are fixed
-
+	avatarOffsets = llListReplaceList(avatarOffsets, [offset], avatarOffsetsIndex, avatarOffsetsIndex)
 
 
 #define RezNextAdjuster()						\
@@ -297,7 +288,7 @@ default
 
 							//send list of buttons to the menu
 							//
-							llMessageLinked(LINK_SET, seatupdate + 1, buttonStr, NULL_KEY);
+							llMessageLinked(LINK_SET, iBUTTONUPDATE, buttonStr, NULL_KEY);
 						}
 
 						//we need a list consisting of sitter key followed by each face anim and the associated time of each
@@ -395,7 +386,7 @@ default
 				return;
 			}  // seatupdate
 
-		if(num == 1)    //got chatchannel from the core.
+		if(num == iRCV_CHATCHANNEL)    //got chatchannel from the core.
 			{
 				chatchannel = (integer)str;
 				DEBUGmsg0("chat channel:", chatchannel);
@@ -486,12 +477,24 @@ default
 			{
 				vector $_ = (vector)str;
 				inlineSetAvatarOffset(id, $_);
-				llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
+
+				int index = LstIdx(slots, id);
+				unless(iIsUndetermined(index))
+					{
+						// Send only the one slot that has actually changed.
+						//
+						index /= stride;
+						virtualSendSlotSingle(slots, index);
+
+						// reposition the agent
+						//
+						doSeats(index, kSlots2Ava(index));
+					}
 
 				return;
 			}
 
-		if(num == -241)
+		if(iTOGGLE_FACIALS == num)
 			{
 				bool on = (str == "on");
 				CompStatus(stFACE_ENABLE, on);
@@ -501,8 +504,6 @@ default
 
 		if(num == iUNSIT)
 			{
-				// why not unsit directly?  This needs a slot update ...
-				//
 				llUnSit((key)str);
 
 				return;
@@ -524,7 +525,7 @@ default
 				return;
 			}
 
-		if(num == 201)   //adjust has been chosen from the menu
+		if(num == ADJUST)   //adjust has been chosen from the menu
 			{
 				llSay(chatchannel, "adjuster_die");
 				adjusters = [];
@@ -541,7 +542,7 @@ default
 				return;
 			}
 
-		if(num == 205)   //stopadjust has been chosen from the menu
+		if(num == STOPADJUST)   //stopadjust has been chosen from the menu
 			{
 				llMessageLinked(LINK_SET, 204, "", "");
 				llSay(chatchannel, "adjuster_die");
@@ -550,7 +551,7 @@ default
 				return;
 			}
 
-		if(num == 2 && str == "RezAdjuster")      //got a new pose so update adjusters.
+		if(iADJUST_UPDATE_ADJUSTERS(num, str))      //got a new pose so update adjusters.
 			{
 				adjusters = [];
 				RezNextAdjuster();
@@ -560,7 +561,7 @@ default
 
 		// this is being relayed from the core
 		//
-		if(num == 3)      //heard from an adjuster so a new position must be used, upate slots and chat out new position.
+		if(num == iADJUST_UPDATE)      //heard from an adjuster so a new position must be used, upate slots and chat out new position.
 			{
 				integer index = llListFindList(adjusters, [id]);
 
@@ -606,30 +607,19 @@ default
 			}
 		// /
 
-		if(num == 204)
+		if(num == DUMP)
 			{
-				integer n;
-				string primName = llGetObjectName();
-				llSetObjectName(llGetLinkName(1));
-
-				for(n = 0; n < llGetListLength(slots) / 8; ++n)
-					{
-						list slice = llList2List(slots, n * stride, n * stride + 3);
-						slice = llListReplaceList(slice, [RAD_TO_DEG * llRot2Euler(llList2Rot(slice, 2))], 2, 2);
-						string sendSTR = "ANIM|" + llDumpList2String(slice, "|");
-						llRegionSayTo(llGetOwner(), 0, "\n" + sendSTR);
-					}
+				integer n = Len(slots) / stride;
+				LoopDown(n, sprintlt("ANIM", sSlots2Pose(n), vSlots2Position(n), llRot2Euler(rSlots2Rot(n)) * RAD_TO_DEG, sSlots2Facials(n)));
 
 				llRegionSay(chatchannel, "posdump");
-				llSetObjectName(primName);
 
 				return;
 			}
 
 		if(num == memusage)
 			{
-				llSay(0, "Memory Used by " + llGetScriptName() + ": " + (string)llGetUsedMemory() + " of " + (string)llGetMemoryLimit()
-				      + ",Leaving " + (string)llGetFreeMemory() + " memory free.");
+				MemTell;
 			}
 	}
 
