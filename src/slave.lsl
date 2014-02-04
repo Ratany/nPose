@@ -123,24 +123,16 @@ integer AvLinkNum(key av)
 // (put into getlinknumbers.lsl)
 
 
-void doSeats(integer slotNum, key avKey)
+void doSeats(integer slotNum)
 {
 	// DEBUG_virtualShowSlots(slots);
 
+	key avKey = kSlots2Ava(slotNum);
 	int avlinknum = AvLinkNum(avKey);
-
-	// For now, I want to know either:
-	//
-	when(avlinknum < 0)
+	when((avlinknum < 0) || (avKey == NULL_KEY))
 		{
-			ERRORmsg("agent not linked");
 			return;
 		}
-	unless(avKey != NULL_KEY)
-	{
-		ERRORmsg("not an agent");
-		return;
-	}
 
 
 	UnStatus(stFACE_ANIM_DOING);
@@ -346,22 +338,17 @@ default
 						// So do these agents first and worry about their faces later.
 						{
 							int $_ = Len(slots) / stride;
-							LoopDown($_,
-								 key agent = kSlots2Ava($_);
-								 if(agent)
-									 {
-										 // doSeats() triggers runtimeperms-event by requesting perms
-										 //
-										 // <-- not anymore!
-										 //
-										 doSeats($_, agent);
-									 }
-								 );
+							LoopDown($_, doSeats($_));
 
 							// Once everyone is rotated and positioned, ask someone for perms.
 							//
-							$_ = Len(slots) / stride;
-							LoopDown($_, key agent = kSlots2Ava($_); if(agent) { llRequestPermissions(agent, flagPERMS); return; });
+							// requestion perms from a prim yields a script error
+							//
+							key agent = llGetLinkKey(llGetNumberOfPrims());
+							when(AgentIsHere(agent))
+								{
+									llRequestPermissions(agent, flagPERMS);
+								}
 						}
 
 						return;
@@ -385,6 +372,12 @@ default
 				ERRORmsg("protocol violation");
 				return;
 			}  // seatupdate
+
+		if(num == seatupdate)
+			{
+				ERRORmsg("method not supported");
+				return;
+			}
 
 		if(num == iRCV_CHATCHANNEL)    //got chatchannel from the core.
 			{
@@ -488,7 +481,7 @@ default
 
 						// reposition the agent
 						//
-						doSeats(index, kSlots2Ava(index));
+						doSeats(index);
 					}
 
 				return;
@@ -513,7 +506,7 @@ default
 			{
 				SetStatus(stDOSYNC);
 				integer $_ = llGetListLength(slots) / 8;
-				LoopDown($_, key agent = kSlots2Ava($_); if(agent) { llRequestPermissions(agent, flagPERMS); doSeats($_, agent); });
+				LoopDown($_, key agent = kSlots2Ava($_); if(agent) { llRequestPermissions(agent, flagPERMS); doSeats($_); });
 
 				// after syncing is completed, unset the status
 				//
@@ -596,7 +589,7 @@ default
 
 						// reposition the agent
 						//
-						doSeats(index, kSlots2Ava(index));
+						doSeats(index);
 
 						//
 						// THE MENU-VIC MIGHT NEEDS THE UPDATE, TOO --- HAVE TO LOOK INTO THAT LATER
