@@ -25,13 +25,15 @@
 #include <lslstddef.h>
 #include <avn/dialog.h>
 
+#include <constants.h>
+
 
 integer DIALOG = -900;
 integer DIALOG_RESPONSE = -901;
 integer DIALOG_TIMEOUT = -902;
 
 integer pagesize = 12;
-integer memusage = 34334;
+
 string MORE = "More";
 //string BACKBTN = "^";
 //string SWAPBTN = "swap";
@@ -275,24 +277,24 @@ default
 
 	link_message(integer sender, integer num, string str, key id)
 		{
+			if(num == DIALOG)
+				{
+					//give a dialog with the options on the button labels
+					//str will be pipe-delimited list with rcpt|prompt|page|backtick-delimited-list-buttons|backtick-delimited-utility-buttons
+					DEBUGmsg0(str);
+					list params = llParseStringKeepNulls(str, ["|"], []);
+					key rcpt = (key)llList2String(params, 0);
+					string prompt = llList2String(params, 1);
+					integer page = (integer)llList2String(params, 2);
+					list lbuttons = llParseStringKeepNulls(llList2String(params, 3), ["`"], []);
+					list ubuttons = llParseStringKeepNulls(llList2String(params, 4), ["`"], []);
+					Dialog(rcpt, prompt, lbuttons, ubuttons, page, id);
+				}
+
 			if(num == memusage)
 				{
-					llSay(0, "Memory Used by " + llGetScriptName() + ": " + (string)llGetUsedMemory() + " of " + (string)llGetMemoryLimit() + ", Leaving " + (string)llGetFreeMemory() + " memory free.");
+					MemTell;
 				}
-			else
-				if(num == DIALOG)
-					{
-						//give a dialog with the options on the button labels
-						//str will be pipe-delimited list with rcpt|prompt|page|backtick-delimited-list-buttons|backtick-delimited-utility-buttons
-						DEBUGmsg0(str);
-						list params = llParseStringKeepNulls(str, ["|"], []);
-						key rcpt = (key)llList2String(params, 0);
-						string prompt = llList2String(params, 1);
-						integer page = (integer)llList2String(params, 2);
-						list lbuttons = llParseStringKeepNulls(llList2String(params, 3), ["`"], []);
-						list ubuttons = llParseStringKeepNulls(llList2String(params, 4), ["`"], []);
-						Dialog(rcpt, prompt, lbuttons, ubuttons, page, id);
-					}
 		}
 
 	listen(integer channel, string name, key id, string message)

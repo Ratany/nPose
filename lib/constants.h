@@ -59,10 +59,61 @@
 #define stride                       8
 
 
+#define USE_NiceMemstat
 
-#define MemTell \
-	apf("\n", llGetScriptName(), "\n", llGetMemoryLimit(), "max\n", llGetUsedMemory(), "used\n", llGetFreeMemory(), "free\n", llGetMemoryLimit() - llGetUsedMemory() - llGetFreeMemory(), "gc")
+#ifdef USE_NiceMemstat
 
+// printf() is soooo missing from LSL :((((
+//
+#define virtualsprintf_float(_n, $_fmt, _null, _ret)			\
+	{								\
+		_ret = "";						\
+		int $_ = ($_fmt) + 1;					\
+		LoopDown($_, _ret += _null);				\
+		_ret += (string)(_n);					\
+		$_ = ($_fmt) + 1;					\
+		while(Strlen(Begstr(_ret, Stridx(_ret, "."))) > $_)	\
+			{						\
+				_ret = Endstr(_ret, 1);			\
+			}						\
+	}
+
+
+#define MemTell								\
+	{								\
+		float limit = (float)llGetMemoryLimit();		\
+		float free = (float)llGetFreeMemory();			\
+		float used = (float)llGetUsedMemory();			\
+		float gc = limit - free - used;				\
+									\
+		float pfree = free * 100.0 / limit;			\
+		float pused = used * 100.0 / limit;			\
+		float pgc = gc * 100.0 / limit;				\
+									\
+		string slimit;						\
+		string sfree;						\
+		string sused;						\
+		string sgc;						\
+		string spfree;						\
+		string spused;						\
+		string spgc;						\
+									\
+		virtualsprintf_float(limit, 5, " ", slimit);		\
+		virtualsprintf_float(free, 5, " ", sfree);		\
+		virtualsprintf_float(used, 5, " ", sused);		\
+		virtualsprintf_float(gc, 5, " ", sgc);			\
+		virtualsprintf_float(pfree, 5, " ", spfree);		\
+		virtualsprintf_float(pused, 5, " ", spused);		\
+		virtualsprintf_float(pgc, 7, " ", spgc);		\
+									\
+		apf("\n", llGetScriptName(), "\n", slimit, "max\t\t100 % max\n", sused, "used\t", spused, "% used\n", sfree, "free\t", spfree, "% free\n", sgc, "gc\t", spgc, "% gc"); \
+	}
+
+#else
+
+#define MemTell                    llSay(PUBLIC_CHANNEL, concat(llGetScriptName(), concat((string)llGetFreeMemory() + " bytes free")))
+
+#endif  // USE_NiceMemstat
 
 
 #endif  // _CONSTANTS

@@ -32,6 +32,7 @@
 #include <lslstddef.h>
 #include <avn/menu-vic.h>
 
+#include <constants.h>
 
 
 //default options settings.  Change these to suit personal preferences
@@ -47,29 +48,29 @@ key toucherid;
 list avs;
 list menus;
 list menuPerm = [];
-string setprefix = "SET";
+
 string btnprefix = "BTN";
-string defaultprefix = "DEFAULT";
-list cardprefixes = [setprefix, defaultprefix, btnprefix];
+//string defaultprefix = "DEFAULT";
+list cardprefixes = [cardprefix, defaultprefix, btnprefix];
 list slotbuttons = [];//list of seat# or seated AV name for change seats menu.
 
 list dialogids;     //3-strided list of dialog ids, the avs they belong to, and the menu path.
 integer DIALOG = -900;
 integer DIALOG_RESPONSE = -901;
 integer DIALOG_TIMEOUT = -902;
-integer DOPOSE = 200;
-integer ADJUST = 201;
-integer SWAP = 202;
-integer DUMP = 204;
-integer STOPADJUST = 205;
-integer SYNC = 206;
+
+
+
+
+
+
 integer DOBUTTON = 207;
-integer ADJUSTOFFSET = 208;
-integer SETOFFSET = 209;
-integer SWAPTO = 210;
+
+
+
 integer DOMENU = -800;
 integer DOMENU_ACCESSCTRL = -801;
-integer memusage = 34334;
+
 integer optionsNum = -240;
 string FWDBTN = "forward";
 string BKWDBTN = "backward";
@@ -302,7 +303,7 @@ BuildMenus() //builds the user defined menu buttons
 			menuPerm += [llList2String(pathParts, -1), menuPerms];
 			string prefix = llList2String(pathParts, 0);
 
-			if(!defaultSet && ((prefix == setprefix) || (prefix == defaultprefix)))
+			if(!defaultSet && ((prefix == cardprefix) || (prefix == defaultprefix)))
 				{
 					defaultPose = llGetInventoryName(INVENTORY_NOTECARD, n);
 					defaultSet = TRUE;
@@ -695,7 +696,7 @@ default
 					list pathlist = llDeleteSubList(llParseStringKeepNulls(path, [":"], []), 0, 0);
 					integer permission = llListFindList(menuPerm, [selection]);
 					string defaultname = llDumpList2String([defaultprefix] + pathlist + [selection], ":");
-					string setname = llDumpList2String([setprefix] + pathlist + [selection], ":");
+					string setname = llDumpList2String([cardprefix] + pathlist + [selection], ":");
 					string btnname = llDumpList2String([btnprefix] + pathlist + [selection], ":");
 
 					//correct the notecard name so the core can find this notecard
@@ -886,8 +887,7 @@ default
 
 			if(num == memusage)  //dump memory stats to local
 				{
-					llSay(0, "Memory Used by " + llGetScriptName() + ": " + (string)llGetUsedMemory() + " of " + (string)llGetMemoryLimit()
-					      + ",Leaving " + (string)llGetFreeMemory() + " memory free.");
+					MemTell;
 				}
 		}
 

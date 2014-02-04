@@ -23,12 +23,14 @@
 
 #include <avn/sat-notsat.h>
 
+#include <constants.h>
+
 
 list slots;
 integer chatchannel;
-integer seatupdate = 35353;//we gonna do satmsg and notsatmsg
-integer stride = 8;
-integer memusage = 34334;
+
+
+
 
 string str_replace(string src, string from, string to)
 {
@@ -141,9 +143,7 @@ default
 			if(num == memusage)
 				{
 					afootell(concat(concat(llGetScriptName(), " "), VERSION));
-
-					//            llSay(0,"Memory Used by " + llGetScriptName() + ": " + (string)llGetUsedMemory() + " of " + (string)llGetMemoryLimit() + ", Leaving " + (string)llGetFreeMemory() + " memory free.");
-					llOwnerSay(llGetScriptName() + " Memory slated for garbage collection: " + (string)(llGetMemoryLimit() - (llGetFreeMemory() + llGetUsedMemory())));
+					MemTell;
 				}
 		}
 }

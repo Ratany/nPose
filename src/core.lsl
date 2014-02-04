@@ -404,9 +404,7 @@ default
 
 		if(num == memusage)
 			{
-				llSay(0, "Memory Used by " + llGetScriptName() + ": " + (string)llGetUsedMemory() + " of " + (string)llGetMemoryLimit() + ", Leaving " + (string)llGetFreeMemory() + " memory free.");
-
-				return;
+				MemTell;
 			}
 	}
 
