@@ -566,39 +566,29 @@ default
 
 				unless(iIsUndetermined(index))
 					{
-						// string primName = llGetObjectName();
-						// llSetObjectName(llGetLinkName(1));
-
+						// get new adjustment from what the adjuster says, position and rotation
+						//
 						list params = llParseString2List(str, ["|"], []);
 
 						vector newpos = ForceList2Vector(params, 0) - llGetPos();
 						newpos /= llGetRot();
 
-						integer slotsindex = index * stride;
 						rotation newrot = ForceList2Rot(params, 1) / llGetRot();
+						// /
 
+						// make a copy of the slot, replace old adjustment with new adjustment
+						//
 						list stridecopy = ySlotsStridecopy(slots, index);
 						ySlotsStrideDelete(slots, index);
 
 						stridecopy = llListReplaceList(stridecopy, [newpos, newrot], SLOTIDX_position, SLOTIDX_rot);
 						ySlotsAddStride(stridecopy, slots);
+						// /
 
-#if 0
-						llRegionSayTo(llGetOwner(), 0, "ANIM|" + llList2String(slots, slotsindex) + "|" + (string)newpos + "|" +
-							      (string)(llRot2Euler(newrot) * RAD_TO_DEG) + "|" + llList2String(slots, slotsindex + 3) + " --> '" + sSlots2Seat(index) + "'");
-#endif
-
-						slotsindex = Len(slots) / stride - 1;
-						virtualinlinePrintSingleSlot(slots, slotsindex);
-						// llSetObjectName(primName);
-
-#if 0
-						// can´t use that here anyway because the slave would hear itself
+						// show what´s in the slot being adjusted
 						//
-						llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
-						//gotta send a message back to the core other than with seatupdate so the core knows it came from here and updates slots list there.
-						llMessageLinked(LINK_SET, (seatupdate + 2000000), llDumpList2String(slots, "^"), NULL_KEY);
-#endif
+						virtualinlinePrintSingleSlot(slots, index);
+
 						// Send only the one slot that has actually changed.
 						//
 						virtualSendSlotSingle(slots, index);
@@ -608,7 +598,7 @@ default
 						doSeats(index, kSlots2Ava(index));
 
 						//
-						// THE MENU-VIC PROBABLY NEEDS THE UPDATE, TOO --- HAVE TO LOOK INTO THAT LATER
+						// THE MENU-VIC MIGHT NEEDS THE UPDATE, TOO --- HAVE TO LOOK INTO THAT LATER
 						//
 					}
 
