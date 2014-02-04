@@ -59,10 +59,44 @@
 #define stride                       8
 
 
+// define USE_NiceMemstat to get nice memory statistics
+//
+// This eats about 2--3kB when outlined and 12kB or so when not
+// outlined because something like snprintf() is missing.  The scripts
+// look as if something like -funroll-loops was enabled when
+// virtualsprintf_float() is not outlined ;)
+//
 #define USE_NiceMemstat
 
+// define OUTLINE_virtualsprintf_float to make virtualsprintf_float()
+// a function
+//
+// uses less memory when USE_NiceMemstat is defined, otherwise more
+//
+#define OUTLINE_virtualsprintf_float
+//
+// so just define it when USE_NiceMemstat is defined
+//
 #ifdef USE_NiceMemstat
+#ifndef OUTLINE_virtualsprintf_float
+#define OUTLINE_virtualsprintf_float
+#endif
+#endif
+//
+// and don´t define USE_NiceMemstat when OUTLINE_virtualsprintf_float
+// is not defined
+//
+#ifndef USE_NiceMemstat
+#undef OUTLINE_virtualsprintf_float
+#endif
+// so whatever ...
+//
+// Only touch USE_NiceMemstat to toggle.
+//
+// /
 
+
+#ifdef USE_NiceMemstat
 // printf() is soooo missing from LSL :((((
 //
 #define virtualsprintf_float(_n, $_fmt, _null, _ret)			\
@@ -77,7 +111,54 @@
 				_ret = Endstr(_ret, 1);			\
 			}						\
 	}
+#endif
 
+
+#ifdef OUTLINE_virtualsprintf_float
+
+#ifdef USE_NiceMemstat
+
+// printf() is soooo missing from LSL :((((
+//
+string sprintf_float(float _n, int $_fmt)
+{
+	string _ret;
+	virtualsprintf_float(_n, $_fmt, " ", _ret);
+	return _ret;
+}
+
+
+#define MemTell							\
+	{							\
+		float limit = (float)llGetMemoryLimit();	\
+		float free = (float)llGetFreeMemory();		\
+		float used = (float)llGetUsedMemory();		\
+		float gc = limit - free - used;			\
+								\
+		float pfree = free * 100.0 / limit;		\
+		float pused = used * 100.0 / limit;		\
+		float pgc = gc * 100.0 / limit;			\
+								\
+		apf("\n", llGetScriptName(), "\n",		\
+		    sprintf_float(limit, 5),			\
+		    "max\t\t100 % max\n",			\
+		    sprintf_float(used, 5),			\
+		    "used\t", sprintf_float(pused, 5),		\
+		    "% used\n", sprintf_float(free, 5),		\
+		    "free\t", sprintf_float(pfree, 5),		\
+		    "% free\n", sprintf_float(gc, 5),		\
+		    "gc\t", sprintf_float(pgc, 7), "% gc");	\
+	}
+
+#else  // OUTLINE_virtualsprintf_float
+
+#define MemTell                    llSay(PUBLIC_CHANNEL, concat(llGetScriptName(), concat(" ", concat((string)llGetFreeMemory(), " bytes free"))))
+
+#endif  // USE_NiceMemstat
+
+#else
+
+#ifdef USE_NiceMemstat
 
 #define MemTell								\
 	{								\
@@ -111,9 +192,12 @@
 
 #else
 
-#define MemTell                    llSay(PUBLIC_CHANNEL, concat(llGetScriptName(), concat((string)llGetFreeMemory() + " bytes free")))
+#define MemTell                    llSay(PUBLIC_CHANNEL, concat(llGetScriptName(), concat(" ", concat((string)llGetFreeMemory(), " bytes free"))))
 
 #endif  // USE_NiceMemstat
+
+#endif  // OUTLINE_virtualsprintf_float
+
 
 
 #endif  // _CONSTANTS
