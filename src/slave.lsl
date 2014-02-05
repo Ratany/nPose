@@ -338,17 +338,12 @@ default
 
 						}
 
-						//we have our new list of AV's and positions so put them where they belong.  fire off the first seated AV and run time will do the rest.
-						//
-						// That´s why this is so awfully slow!  Agents do not need to be repositioned and rotated to play a facial ...
-						// So do these agents first and worry about their faces later.
 						{
-							int $_ = Len(slots) / stride;
-							LoopDown($_, doSeats($_));
-
-							// Once everyone is rotated and positioned, ask someone for perms.
+							// Once alls slots have been received, everyone is rotated and positioned,
+							// and the face anims list has been created. Ask someone for perms to
+							// initiate playing the facials.
 							//
-							// requestion perms from a prim yields a script error
+							// requesting perms from a prim yields a script error
 							//
 							key agent = llGetLinkKey(llGetNumberOfPrims());
 							when(AgentIsHere(agent))
@@ -371,6 +366,11 @@ default
 
 					DEBUGmsg0("rcv a slot:", str);
 					ySlotsAddStride(thisslot, slots);
+
+					// position and rotate agent when a new slot has been received, same
+					// as with receiving a single slot
+					//
+					doSeats(Len(slots) / stride - 1);
 
 					return;
 				}

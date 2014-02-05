@@ -258,8 +258,6 @@
 
 // send a full slots update, whole list, one slot after the other
 //
-// recipients should not act upon the update before it is completed
-//
 #define virtualSendSlotUpdate(_l, _senderkey)				\
 	{								\
 		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, protSLOTINFO_start, _senderkey); \
@@ -269,9 +267,16 @@
 			 llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, llDumpList2String(llList2List(_l, $_ * stride, $_ * stride + stride - 1), "^"), _senderkey) \
 			 );						\
 		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, protSLOTINFO_end, _senderkey); \
-		llMessageLinked(lnSLOTS_RCVR, seatupdate, llDumpList2String(_l, "^"), _senderkey); \
 	}
 
+// seatupdate disabled
+//
+// This seat update, when in virtualSendSlotUpdate(), leads to about
+// 6500 bytes blocked in the core by delayed garbage collection with
+// 33 slots.
+//
+// 		llMessageLinked(lnSLOTS_RCVR, seatupdate, llDumpList2String(_l, "^"), _senderkey);
+//
 
 // virtualSendSlotSingle() and virtualReceiveSlotSingle() are for the
 // update of a single slot only!  To update the whole list, use
