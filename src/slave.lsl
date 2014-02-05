@@ -264,30 +264,9 @@ default
 
 						UnStatus(stSLOTS_RCV);
 
-						// Create a string with buttons for the menu from the slots list.
-						// These buttons are used for changing seats.
+						// tell the menu to update all buttons
 						//
-						{
-							string buttonStr = "";
-							int $_ = Len(slots) / stride;
-							LoopDown($_,
-								 key agent = kSlots2Ava($_);
-								 if(agent)
-									 {
-										 buttonStr += concat(TruncateDialogButton(llGetUsername(agent)), ",");
-									 }
-								 else
-									 {
-										 buttonStr += concat(TruncateDialogButton(sSlots2Seat($_)), ",");
-									 }
-								 );
-
-							//send list of buttons to the menu
-							//
-							// this should be done by the core and not here!
-							//
-							llMessageLinked(LINK_SET, iBUTTONUPDATE, buttonStr, NULL_KEY);
-						}
+						llMessageLinked(LINK_SET, iBUTTONUPDATE, "", NULL_KEY);
 
 						//we need a list consisting of sitter key followed by each face anim and the associated time of each
 						// put face anims for each slot into a list

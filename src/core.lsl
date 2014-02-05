@@ -337,7 +337,8 @@ default
 				// who clicked the button is in id, all delivered by menu-vic
 				//
 				// If the name of an agent is supplied, it must be cast to lower case
-				// before supplied.
+				// before supplied.  Be careful with the different returns of
+				// llGetLinkName() and llGetUsername() or llKey2Name().
 				//
 
 				// try to find the slot number, first by seat
@@ -369,8 +370,13 @@ default
 						while((optexpression != $_1) && $_)
 							{
 								--$_;
-								bool $_b = !Instr(llToLower(llGetUsername(kSlots2Ava($_))), str);
-								$_1 = optexpression * (!$_b - $_b);
+
+								// this sucks because llSubStringIndex() is buggy:
+								//
+								if(Instr(llToLower(llGetUsername(kSlots2Ava($_))), Begstr(str, Stridx(str, " ") - !iIsUndetermined(Stridx(str, " ")))))
+									{
+										$_1 = optexpression;
+									}
 							}
 #undef optexpression
 					}

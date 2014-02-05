@@ -870,7 +870,35 @@ default
 
 			if(iBUTTONUPDATE == num)
 				{
-					slotbuttons = llParseString2List(str, [","], []);
+					//
+					// make a list of all linknames; when a link name can be cast
+					// to an integer > 0, assume it is a numbered seat
+					//
+
+					slotbuttons = [];
+
+					// link numbers either start at 0 or at 1 :(
+					//
+					int $_ = llGetNumberOfPrims();
+					int stop = $_ * (1 != $_) + (1 == $_);
+					$_ = (1 < $_);
+					stop += $_;
+
+					do
+						{
+							string $_n = llGetLinkName($_);
+							int n = (int)$_n;
+							if(n > 0)
+								{
+									slotbuttons += [concat(sSEAT, (string)n)];
+								}
+							else
+								{
+									slotbuttons += [$_n];
+								}
+							++$_;
+						}
+					while(stop != $_);
 
 					return;
 				}
