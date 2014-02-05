@@ -153,7 +153,7 @@
 // the begin of the stride in the slots list the seat with the given
 // number is an item of)
 //
-#define iSeatNoToSlotNo(_n)        (LstIdx(slots, (sSEAT) + (string)(_n)) / (stride))
+// #define iSeatNoToSlotNo(_n)        (LstIdx(slots, (sSEAT) + (string)(_n)) / (stride))
 
 //
 // / used in core
@@ -260,16 +260,16 @@
 //
 // recipients should not act upon the update before it is completed
 //
-#define virtualSendSlotUpdate(_l)					\
+#define virtualSendSlotUpdate(_l, _senderkey)				\
 	{								\
-		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, protSLOTINFO_start, NULL_KEY); \
+		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, protSLOTINFO_start, _senderkey); \
 		int $_ = Len(_l) / stride;				\
 		LoopDown($_,						\
 			 DEBUGmsg3("sending slot:", llDumpList2String(llList2List(_l, $_ * stride, $_ * stride + stride - 1), "^")); \
-			 llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, llDumpList2String(llList2List(_l, $_ * stride, $_ * stride + stride - 1), "^"), NULL_KEY) \
+			 llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, llDumpList2String(llList2List(_l, $_ * stride, $_ * stride + stride - 1), "^"), _senderkey) \
 			 );						\
-		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, protSLOTINFO_end, NULL_KEY); \
-		llMessageLinked(lnSLOTS_RCVR, seatupdate, llDumpList2String(_l, "^"), NULL_KEY); \
+		llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_ALL, protSLOTINFO_end, _senderkey); \
+		llMessageLinked(lnSLOTS_RCVR, seatupdate, llDumpList2String(_l, "^"), _senderkey); \
 	}
 
 
@@ -280,8 +280,11 @@
 //
 // send a single slot as update
 //
-#define virtualSendSlotSingle(_lsrc, _slotnum)				\
-	llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_SINGLE, llDumpList2String(llList2List(_lsrc, (_slotnum) * stride, (_slotnum) * stride + stride - 1), "^"), NULL_KEY)
+// _senderkey must be used to prevent scripts from acting on slot
+// updates they sent themselves!
+//
+#define virtualSendSlotSingle(_lsrc, _slotnum, _senderkey)		\
+	llMessageLinked(lnSLOTS_RCVR, iSLOTINFO_SINGLE, llDumpList2String(llList2List(_lsrc, (_slotnum) * stride, (_slotnum) * stride + stride - 1), "^"), _senderkey)
 //
 //
 // receive an update for a single slot
@@ -289,17 +292,29 @@
 // goes into the linked_message() event as is
 // requires that seat numbers are uniq
 //
-#define virtualReceiveSlotSingle(_sfrom, _ldest, $_i)			\
+// _senderkey must be used to prevent scripts from acting on slot
+// updates they sent themselves!
+//
+#define virtualReceiveSlotSingle(_sfrom, _ldest, $_i, _senderkey, _mykey, _do) \
 	if(iSLOTINFO_SINGLE == ($_i))					\
 		{							\
-			list $_l = llParseStringKeepNulls(_sfrom, ["^"], []); \
-			int $_slotnum = LstIdx(_ldest, sSomeSlots2Seat($_l, 0)); \
-			unless(iIsUndetermined($_slotnum))		\
+			if(_mykey != _senderkey)			\
 				{					\
-					$_slotnum /= stride;		\
-					ySlotsStrideDelete(_ldest, $_slotnum); \
-					ySlotsAddStride($_l, _ldest);	\
+					list $_l = llParseStringKeepNulls(_sfrom, ["^"], []); \
+					int $_slotnum = LstIdx(_ldest, sSomeSlots2Seat($_l, 0)); \
+					unless(iIsUndetermined($_slotnum)) \
+						{			\
+							$_slotnum /= stride; \
+							ySlotsStrideDelete(_ldest, $_slotnum); \
+							ySlotsAddStride($_l, _ldest); \
+							_do;		\
+						}			\
+					else				\
+						{			\
+							ERRORmsg("undetermined slotupdate"); \
+						}			\
 				}					\
+									\
 			return;						\
 		}
 

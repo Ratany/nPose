@@ -36,10 +36,6 @@
 #define _INLINE_FindEmptySlot
 
 
-// inlines SwapTwoSlots()
-//
-#define _INLINE_SwapTwoSlots
-
 
 ///////////////////////////////////////////////////////////////////////////
 //
@@ -83,70 +79,6 @@ integer FindEmptySlot()
 }
 #endif
 
-
-#ifdef _INLINE_SwapTwoSlots
-
-// SwapTwoSlots() can optionally be inlined
-
-#define SwapTwoSlots(currentseatnum, newseatnum)			\
-	int OldSlot = iSeatNoToSlotNo((currentseatnum));		\
-	int NewSlot = iSeatNoToSlotNo((newseatnum));			\
-									\
-	DEBUGmsg3("swap slots:", OldSlot, "with", NewSlot);		\
-									\
-	when((OldSlot != NewSlot) && !boolInvalidSlotNo(OldSlot) && !boolInvalidSlotNo(NewSlot)) \
-	{								\
-		key oldslotagent = kSlots2Ava(OldSlot);			\
-		OldSlot *= stride;					\
-		OldSlot += SLOTIDX_agent;				\
-		slots = llListReplaceList(slots, [kSlots2Ava(NewSlot)], OldSlot, OldSlot); \
-									\
-		NewSlot *= stride;					\
-		NewSlot += SLOTIDX_agent;				\
-		slots = llListReplaceList(slots, [oldslotagent], NewSlot, NewSlot); \
-		llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);	\
-	}
-
-#else
-
-void SwapTwoSlots(integer currentseatnum, integer newseatnum)
-{
-	int OldSlot = iSeatNoToSlotNo(currentseatnum);
-	int NewSlot = iSeatNoToSlotNo(newseatnum);
-
-	when((OldSlot != NewSlot) && !boolInvalidSlotNo(OldSlot) && !boolInvalidSlotNo(NewSlot))
-		{
-			// put the new agent into the old slot
-			//
-			key oldslotagent = kSlots2Ava(OldSlot);
-			OldSlot *= stride;
-			OldSlot += SLOTIDX_agent;
-			slots = llListReplaceList(slots, [kSlots2Ava(NewSlot)], OldSlot, OldSlot);
-
-			// put the old agent into the new slot
-			//
-			NewSlot *= stride;
-			NewSlot += SLOTIDX_agent;
-			slots = llListReplaceList(slots, [oldslotagent], NewSlot, NewSlot);
-			llMessageLinked(LINK_SET, seatupdate, llDumpList2String(slots, "^"), NULL_KEY);
-		}
-}
-#endif  // _INLINE_SwapTwoSlots
-
-// old version would use the last seat for swapping when the agent
-// does not have a slot assigned, and the code indicates that this is
-// not intended
-//
-// new version does not swap when the agent does not have a slot
-// assigned or when the seat number is out of bounds
-//
-#define SwapAvatarInto(avatar, newseat)					\
-	int idx = LstIdx(slots, (avatar)) / (stride);			\
-									\
-	unless(boolInvalidSlotNo(idx))					\
-	{								\
-		SwapTwoSlots(iSlots2SeatNo(idx), (newseat));		\
-	}
 
 #define ReadCard()							\
 		lastStrideCount = slotMax;				\

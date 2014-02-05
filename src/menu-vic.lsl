@@ -506,23 +506,13 @@ default
 
 					if(llList2String(llParseString2List(path, [":"], []), -1) == SLOTBTN)  //change seats
 						{
-							if(llGetSubString(selection, 0, 3) == "seat") //clicker selected an open seat where menu is 'seat'+#
+							if(Onlst(slotbuttons, selection))
 								{
-									integer slot = (integer)llGetSubString(selection, 4, -1);
-
-									if(slot >= 0)
-										{
-											llMessageLinked(LINK_SET, SWAPTO, (string)(slot), toucherid);
-										}
+									llMessageLinked(LINK_SET, SWAPTO, llToLower(selection), toucherid);
 								}
-							else   //clicker selected a name so get seat# from list
+							else
 								{
-									integer slot = llListFindList(slotbuttons, [selection]) + 1;
-
-									if(slot >= 0)
-										{
-											llMessageLinked(LINK_SET, SWAPTO, (string)(slot), toucherid);
-										}
+									ERRORmsg("invalid button");
 								}
 
 							list pathparts = llParseString2List(path, [":"], []);
@@ -878,7 +868,7 @@ default
 					return;
 				}
 
-			if(num == 35354)
+			if(iBUTTONUPDATE == num)
 				{
 					slotbuttons = llParseString2List(str, [","], []);
 

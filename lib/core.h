@@ -29,8 +29,6 @@
 
 #define Vec2Rot(_v)                llEuler2Rot((_v) * DEG_TO_RAD)
 
-#define boolInvalidSlotNo(_no)     (((_no) < 0) || ((_no) > slotMax))
-
 
 int status = 0;
 #define stADJUSTERS                1
@@ -50,6 +48,11 @@ key btnid;
 key clicker;
 key dataid;
 key hudId;
+
+// used to prevent receiving slot updates sent by self
+//
+key kMYKEY;
+
 
 string btncard;
 string card;

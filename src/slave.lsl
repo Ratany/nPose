@@ -74,6 +74,9 @@ integer seatcount;
 // integer stop;
 
 
+// used to prevent receiving slot updates sent by self
+//
+key kMYKEY;
 
 key thisAV;
 
@@ -125,8 +128,6 @@ integer AvLinkNum(key av)
 
 void doSeats(integer slotNum)
 {
-	// DEBUG_virtualShowSlots(slots);
-
 	key avKey = kSlots2Ava(slotNum);
 	int avlinknum = AvLinkNum(avKey);
 	when((avlinknum < 0) || (avKey == NULL_KEY))
@@ -134,6 +135,7 @@ void doSeats(integer slotNum)
 			return;
 		}
 
+	// virtualinlinePrintSingleSlot(slots, slotNum);
 
 	UnStatus(stFACE_ANIM_DOING);
 
@@ -224,17 +226,19 @@ void doSeats(integer slotNum)
 default
 {
 	event state_entry()
-		{
-			afootell(concat(concat(llGetScriptName(), " "), VERSION));
+	{
+		afootell(concat(concat(llGetScriptName(), " "), VERSION));
 
-			llMessageLinked(LINK_SET, SEND_CHATCHANNEL, "", "");
-			primcount = llGetNumberOfPrims();
-			newprimcount = primcount;
-		}
+		kMYKEY = llGenerateKey();
+
+		llMessageLinked(LINK_SET, SEND_CHATCHANNEL, "", "");
+		primcount = llGetNumberOfPrims();
+		newprimcount = primcount;
+	}
 
 	event link_message(integer sender, integer num, string str, key id)
 	{
-		if(iSLOTINFO_ALL == num)
+		if((iSLOTINFO_ALL == num) && (id != kMYKEY))
 			{
 				// process transfer of slots list
 				//
@@ -280,13 +284,15 @@ default
 
 							//send list of buttons to the menu
 							//
+							// this should be done by the core and not here!
+							//
 							llMessageLinked(LINK_SET, iBUTTONUPDATE, buttonStr, NULL_KEY);
 						}
 
 						//we need a list consisting of sitter key followed by each face anim and the associated time of each
 						// put face anims for each slot into a list
 						{
-							DEBUG_virtualShowSlots(slots);
+							// DEBUG_virtualShowSlots(slots);
 
 							UnStatus(stFACE_ANIM_GOT);
 							faceTimes = [];
@@ -328,7 +334,7 @@ default
 									 }
 								 );
 
-							DEBUG_virtualShowSlots(slots);
+							// DEBUG_virtualShowSlots(slots);
 
 						}
 
@@ -372,6 +378,10 @@ default
 				ERRORmsg("protocol violation");
 				return;
 			}  // seatupdate
+
+		// receive an update for a single slot and doSeats() for that slot
+		//
+		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY, doSeats(Len(slots) / stride - 1));
 
 		if(num == seatupdate)
 			{
@@ -477,7 +487,7 @@ default
 						// Send only the one slot that has actually changed.
 						//
 						index /= stride;
-						virtualSendSlotSingle(slots, index);
+						virtualSendSlotSingle(slots, index, kMYKEY);
 
 						// reposition the agent
 						//
@@ -585,7 +595,7 @@ default
 
 						// Send only the one slot that has actually changed.
 						//
-						virtualSendSlotSingle(slots, index);
+						virtualSendSlotSingle(slots, index, kMYKEY);
 
 						// reposition the agent
 						//

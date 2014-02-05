@@ -213,6 +213,8 @@ default
 	{
 		afootell(concat(concat(llGetScriptName(), " "), VERSION));
 
+		kMYKEY = llGenerateKey();
+
 		DEBUG_TellMemory("entry");
 
 
@@ -277,7 +279,7 @@ default
 				// send chat channel instead and update slots
 				//
 				llMessageLinked(LINK_SET, 1, (string)chatchannel, NULL_KEY);
-				virtualSendSlotUpdate(slots);
+				virtualSendSlotUpdate(slots, kMYKEY);
 				ERRORmsg("reset denied");
 			}
 
@@ -328,32 +330,95 @@ default
 				return;
 			}
 
-		if(num == SWAP)
+		if(num == SWAPTO)
 			{
-				DEBUGmsg3("should swap some of", slotMax, "slots");
-				// length is irrelevant
 				//
-				// if(llGetListLength(slots) / stride >= 2)
-				when(slotMax > 1)
+				// str is a button label or the name of an agent; the uuid of the agent
+				// who clicked the button is in id, all delivered by menu-vic
+				//
+				// If the name of an agent is supplied, it must be cast to lower case
+				// before supplied.
+				//
+
+				// try to find the slot number, first by seat
+				//
+				int $_1 = LstIdx(slots, str);
+
+				if(iIsUndetermined($_1))
 					{
-						DEBUGmsg3("swapping some of", slotMax, "slots");
-						list seats2Swap = llParseString2List(str, [","], []);
-						SwapTwoSlots(llList2Integer(seats2Swap, 0), llList2Integer(seats2Swap, 1));
+						//
+						// could be an agent
+						//
+
+						// slotMax must never be undetermined
+						//
+						int $_ = slotMax;
+
+// shift instead of multiply when possible
+// conveniently, the stride is 8, so shift by 3
+#if stride == 8
+#define optexpression ($_ << 3)
+// intentionally no #else here so it becomes noticable when the stride
+// changes
+#endif
+
+						// find the names of agents in the slots and see if the button label is
+						// contained in their names; yield either -1 when not, or the index to
+						// the uuid of the agent in the slots list
+						//
+						while((optexpression != $_1) && $_)
+							{
+								--$_;
+								bool $_b = !Instr(llToLower(llGetUsername(kSlots2Ava($_))), str);
+								$_1 = optexpression * (!$_b - $_b);
+							}
+#undef optexpression
 					}
+
+				// the agent who clicked the button must be on the slots list to find their slot number
+				//
+				int $_2 = LstIdx(slots, id);
+
+				unless(iIsUndetermined($_1) || iIsUndetermined($_2))
+					{
+						// convert to slot numbers --- this eliminates the difference between
+						// either "seat supplied" or "agent name supplied" for the indices to
+						// the agent uuid in the slots that are swapped
+						//
+						$_1 /= stride;
+						$_2 /= stride;
+
+						when($_2 != $_1)
+							{
+								key $_ = kSlots2Ava($_2);
+
+								slots = llListReplaceList(slots, [kSlots2Ava($_1)], $_2 * stride + SLOTIDX_agent, $_2 * stride + SLOTIDX_agent);
+								virtualSendSlotSingle(slots, $_2, kMYKEY);
+
+								slots = llListReplaceList(slots, [$_], $_1 * stride + SLOTIDX_agent, $_1 * stride + SLOTIDX_agent);
+								virtualSendSlotSingle(slots, $_1, kMYKEY);
+							}
+					}
+				else
+					{
+						ERRORmsg("undetermined slot", $_1, $_2);
+					}
+
 
 				return;
 			}
 
-		if(num == SWAPTO)
+		if(num == SWAP)
 			{
-				SwapAvatarInto(id, (int)str);
-
+				ERRORmsg("method obsolete");
 				return;
 			}
 
 		// receive an update for a single slot
 		//
-		virtualReceiveSlotSingle(str, slots, num);
+		// currently do nothing
+		//
+		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY, ;);
 
 		// this can hopefully be replaced with sending single slots to get
 		// only those that actually changed
@@ -585,7 +650,7 @@ default
 
 				// send slots list to other scripts
 				//
-				virtualSendSlotUpdate(slots);
+				virtualSendSlotUpdate(slots, kMYKEY);
 
 				// card has been read and we have adjusters, send message to slave script.
 				//
@@ -654,7 +719,7 @@ default
 
 						// send slots list to other scripts
 						//
-						virtualSendSlotUpdate(slots);
+						virtualSendSlotUpdate(slots, kMYKEY);
 
 						return;
 					}
@@ -741,7 +806,7 @@ default
 
 						// send slots list to other scripts
 						//
-						virtualSendSlotUpdate(slots);
+						virtualSendSlotUpdate(slots, kMYKEY);
 
 						DEBUG_TellMemory("assign slots");
 					}
@@ -759,7 +824,7 @@ default
 			{
 				// Why send a seatupdate on region changes?
 				//
-				virtualSendSlotUpdate(slots);
+				virtualSendSlotUpdate(slots, kMYKEY);
 			}
 #endif
 
