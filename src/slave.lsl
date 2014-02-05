@@ -358,9 +358,10 @@ default
 				return;
 			}  // seatupdate
 
-		// receive an update for a single slot and doSeats() for that slot
+		// receive an update for a single slot and doSeats() for that slot,
+		// tell menu to update buttons
 		//
-		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY, doSeats(Len(slots) / stride - 1));
+		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY, doSeats(Len(slots) / stride - 1); llMessageLinked(LINK_SET, iBUTTONUPDATE, "", NULL_KEY));
 
 		if(num == seatupdate)
 			{
