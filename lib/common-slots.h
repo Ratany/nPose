@@ -51,6 +51,10 @@
 #define sSlots2Notsat(_strideidx)       llList2String   (slots, SLOTIDX_notsat   + stride * (_strideidx))
 #define sSlots2Seat(_strideidx)         llList2String   (slots, SLOTIDX_seatno   + stride * (_strideidx))
 
+#define yEnslotAgent(_k, _strideidx)    (slots = llListReplaceList(slots, [_k], SLOTIDX_agent + stride * (_strideidx), SLOTIDX_agent + stride * (_strideidx)))
+#define yUnenslotAgent(_strideidx)      yEnslotAgent("", _strideidx)
+
+
 // same as sSlots2Seat(), for any list specified in params
 //
 #define sSomeSlots2Seat(_l, _strideidx) llList2String   (_l, SLOTIDX_seatno   + stride * (_strideidx))
@@ -66,8 +70,6 @@
 #define sToSlotsSatmsg(_l, _strideidx)       llList2String   (_l, SLOTIDX_satmsg   + stride * (_strideidx))
 #define sToSlotsNotsat(_l, _strideidx)       llList2String   (_l, SLOTIDX_notsat   + stride * (_strideidx))
 #define sToSlotsSeat(_l, _strideidx)         llList2String   (_l, SLOTIDX_seatno   + stride * (_strideidx))
-
-
 
 
 #define virtualinlinePrintSingleSlot(_list, _slotnum)			\

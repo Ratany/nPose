@@ -23,7 +23,7 @@
 #define DEBUG0 0  // anims, seatupdate
 #define DEBUG1 0  // stopping anims
 #define DEBUG2 0  // stopping anims
-#define DEBUG3 0  //
+#define DEBUG3 0  // doSeats()
 
 
 // #define _STD_DEBUG_USE_TIME
@@ -182,6 +182,11 @@ void doSeats(integer slotNum)
 
 	agentpos.z += 0.4;
 	SLPPF(avlinknum, [PRIM_POSITION, ((agentpos - (llRot2Up(agentrot) * size.z * 0.02638)) * localrot) + localpos, PRIM_ROTATION, agentrot * localrot / llGetRootRotation()]);
+
+#if DEBUG3
+	DEBUGmsg3("pos:", ((agentpos - (llRot2Up(agentrot) * size.z * 0.02638)) * localrot) + localpos, "rot:", agentrot * localrot / llGetRootRotation());
+	virtualinlinePrintSingleSlot(slots, slotNum);
+#endif
 }
 
 

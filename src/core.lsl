@@ -22,7 +22,7 @@
 
 #define DEBUG0 0  // card reading
 #define DEBUG1 0  // listener
-#define DEBUG2 0  // process line
+#define DEBUG2 0  // assigning slots
 #define DEBUG3 0  // slotMax, assigning slots, sending slots
 
 // #define DEBUG_tellmem  // memory info
@@ -53,14 +53,27 @@ ProcessLine(string line, key av)
 
 	if("ANIM" == action)
 		{
-
-			DEBUGmsg2("test vector:", ForceList2Vector(params, 2));
-
 			if(slotMax < lastStrideCount)
 				{
-					slots = llListReplaceList(slots, [llList2String(params, 1), ForceList2Vector(params, 2),
-									  Vec2Rot(ForceList2Vector(params, 3)), llList2Key(params, 4), llList2Key(slots, (slotMax) * stride + 4),
-									  "", "", "seat" + (string)(slotMax + 1)], slotMax * stride, slotMax * stride + 7);
+					list $_ = ySlotsStridecopy(slots, slotMax);
+					/*
+					$_ = llListReplaceList($_,
+							       llList2List(params, 1, 2)
+							       + [Vec2Rot(ForceList2Vector(params, 3))]
+							       + llList2List(params, 4, 4)
+							       + [kSlots2Ava(slotMax),
+								  "",
+								  "",
+								  "seat" + (string)(slotMax + 1)],
+							       0, stride - 1);
+					*/
+					$_ = llListReplaceList($_, [llList2String(params, 1), ForceList2Vector(params, 2),
+								    Vec2Rot(ForceList2Vector(params, 3)), llList2Key(params, 4), kSlots2Ava(slotMax),
+							       "", "", "seat" + (string)(slotMax + 1)], 0, stride - 1);
+
+
+					ySlotsStrideDelete(slots, slotMax);
+					ySlotsAddStride($_, slots);
 
 					DEBUGmsg2("slots replace, params:", llList2CSV(params));
 				}
@@ -109,13 +122,6 @@ ProcessLine(string line, key av)
 							lastStrideCount = slotMax;
 						}
 				}
-
-#if 0
-			// this was a replacement, no adjustment needed here?
-			//
-			slotMax = llGetListLength(slots) / stride;
-			lastStrideCount = slotMax;
-#endif
 
 			DEBUG_TellMemory("SINGLE");
 
@@ -617,20 +623,19 @@ default
 
 								if(agent)
 									{
-										unless(emptySlot < 0)
+										when(emptySlot < 0)
 											{
-												// no free slot is available, so unsit the agent from the slot
+												// no free slot is available, so unsit the agent
 												//
-												if(sits((key)agent))
-													{
-														llMessageLinked(LINK_SET, iUNSIT, agent, NULL_KEY);
-														DEBUGmsg2("no slot for", llGetUsername(agent));
-													}
+												// no need to look for further free slots
+												//
+												llMessageLinked(LINK_SET, iUNSIT, agent, NULL_KEY);
+												DEBUGmsg2("no slot for", llGetUsername(agent));
 											}
 										else
 											{
 												//if AV in a 'now' extra seat and if a real seat available, seat them
-												slots = llListReplaceList(slots, [llList2Key(slots, x * stride + 4)], emptySlot * stride + 4, emptySlot * stride + 4);
+												yEnslotAgent(kSlots2Ava(x), emptySlot);
 
 												// There may still be free slots: Find another free slot.
 												//
@@ -655,6 +660,8 @@ default
 				DEBUG_virtualShowSlots(slots);
 
 				// send slots list to other scripts
+				//
+				// Full update is required here!
 				//
 				virtualSendSlotUpdate(slots, kMYKEY);
 
@@ -691,16 +698,11 @@ default
 				lastPrimCount = curPrimCount;
 				curPrimCount = llGetNumberOfPrims();
 
-				// assignSlots()
-
-				// called after a SET card was read or when the linkset changed
-				// no verification whether the link set changed because of a prim or an agent?
-
 				// most recent sitter
 				//
 				key thisKey = llGetLinkKey(llGetNumberOfPrims());
 
-				when((curPrimCount < lastPrimCount) || !boolIsAgent(thisKey))
+				when((curPrimCount < lastPrimCount))
 					{
 						// either no agents are sitting, or there are not as many agents sitting
 						// as there were
@@ -711,21 +713,28 @@ default
 
 						// unassign slots from all agents in the slot list who aren´t sitting on a prim
 						//
-						int n = Len(slots) / stride;
+						int n = slotMax;
 
 						LoopDown(n,
-							 if(!sits(kSlots2Ava(n)))
+							 key agent = kSlots2Ava(n);
+							 if(agent)
 								 {
-									 slots = llListReplaceList(slots, [""], n * stride + 4, n * stride + 4);
-									 DEBUGmsg2("unassigned slot of agent:", kSlots2Ava(n));
+									 bool b;
+									 inlineIsSitting(agent, b);
+
+									 unless(b)
+									 {
+										 yUnenslotAgent(n);
+										 DEBUGmsg2("unassigned slot", n);
+
+										 // send a slot update right away
+										 //
+										 virtualSendSlotSingle(slots, n, kMYKEY);
+									 }
 								 }
 							 );
 
 						lastPrimCount = curPrimCount;
-
-						// send slots list to other scripts
-						//
-						virtualSendSlotUpdate(slots, kMYKEY);
 
 						return;
 					}
@@ -751,27 +760,32 @@ default
 								int n = 1;
 								while(n <= primcount) //find out which prim this new AV is seated on and grab the slot number if it's a numbered prim.
 									{
-										integer slotNum = (integer)llGetLinkName(n);
-										DEBUGmsg2("slotNum:", slotNum);
-
-										if((slotNum > 0) && (slotNum <= slotMax))
+										if(llAvatarOnLinkSitTarget(n) == thisKey)
 											{
-												if(llAvatarOnLinkSitTarget(n) == thisKey)
+												integer slotNum = (integer)llGetLinkName(n);
+												DEBUGmsg2("slotNum:", slotNum);
+
+												if((slotNum > 0) && (slotNum <= slotMax))
 													{
-														if(kSlots2Ava(slotNum - 1) == "")  // this is supposed to be a UUID
+														--slotNum;
+														if(kSlots2Ava(slotNum) == "")  // this is supposed to be a UUID
 															{
-																slots = llListReplaceList(slots, [thisKey], (slotNum - 1) * stride + 4, (slotNum - 1) * stride + 4);
-																DEBUGmsg2(llGetUsername(thisKey), "is put into slot", slotNum - 1);
+																DEBUGmsg2(llGetUsername(thisKey), "is put into slot", slotNum);
+
+																yEnslotAgent(thisKey, slotNum);
+
+																// send a slot update right away
+																//
+																virtualSendSlotSingle(slots, slotNum, kMYKEY);
+																return;
 															}
 													}
 											}
 										++n;
 									}
-
-								DEBUG_virtualShowSlots(slots);
 							}
 
-						// When the sitting agent did not get a slot assigned, they are either
+						// When the sitting agent did not get a slot assigned yet, they are either
 						// not sitting on a a prim the name of which can be cast to an integer,
 						// or all such prims already have agents sitting on them.
 						//
@@ -790,50 +804,33 @@ default
 								if(freeslot >= 0)
 									{
 										//we have a spot.. seat them
-										slots = llListReplaceList(slots, [thisKey], freeslot * stride + 4, freeslot * stride + 4);
-
+										yEnslotAgent(thisKey, freeslot);
 										DEBUGmsg2(llGetUsername(thisKey), "has been entered into the slots list");
+
+										// send a slot update right away
+										//
+										virtualSendSlotSingle(slots, freeslot, kMYKEY);
+
 									}
 								else
 									{
-										// don´t unsit agent when they aren´t sitting anymore
-										//
-										if(sits(thisKey))
-											{
-												//no open slots, so unseat them
-												llMessageLinked(LINK_SET, iUNSIT, (string)thisKey, NULL_KEY);
-												DEBUGmsg2("no slots to sit", llGetUsername(thisKey));
-											}
+										//no open slots, so unseat them
+										llMessageLinked(LINK_SET, iUNSIT, (string)thisKey, NULL_KEY);
+										DEBUGmsg2("no slots to sit", llGetUsername(thisKey));
 									}
 
 								DEBUG_virtualShowSlots(slots);
 
 							}
-
-						// send slots list to other scripts
-						//
-						virtualSendSlotUpdate(slots, kMYKEY);
-
-						DEBUG_TellMemory("assign slots");
 					}
 
-				// / assignSlots()
+				// virtualSendSlotUpdate(slots, kMYKEY);
 			}
 
 		if(change & CHANGED_INVENTORY)
 			{
 				llResetScript();
 			}
-
-#if 0
-		if(change & CHANGED_REGION)
-			{
-				// Why send a seatupdate on region changes?
-				//
-				virtualSendSlotUpdate(slots, kMYKEY);
-			}
-#endif
-
 	}
 
 	event on_rez(integer param)

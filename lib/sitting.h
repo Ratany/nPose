@@ -30,7 +30,8 @@
 #define boolIsAgent(_k)            (ZERO_VECTOR != llGetAgentSize(_k))
 
 
-// see whether agent _k is sitting on object or not
+// see whether agent _k is sitting on object or not,
+// stop looking once a link is not an agent
 //
 // saves creating a list of all agents in assignSlots()
 //
@@ -45,9 +46,13 @@
 	}
 
 
+#ifndef _CORE
+
 bool sits(key k)
 {
 	bool b;
 	inlineIsSitting(k, b);
 	return b;
 }
+
+#endif

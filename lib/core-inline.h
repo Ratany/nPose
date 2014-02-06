@@ -55,7 +55,7 @@
 //
 #define FindEmptySlot(_ret)						\
 	_ret = 0;							\
-	while((_ret < slotMax) && (llList2String(slots, _ret * (stride) + 4) != "")) \
+	while((_ret < slotMax) && (kSlots2Ava(_ret) != ""))		\
 		{							\
 			++_ret;					\
 		}							\
@@ -68,7 +68,7 @@ integer FindEmptySlot()
 	int n = 0;
 	while(n < slotMax)
 		{
-			if(llList2String(slots, n * stride + 4) == "")
+			if(kSlots2Ava(n) == "")
 				{
 					return n;
 				}
