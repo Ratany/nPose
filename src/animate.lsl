@@ -26,10 +26,10 @@
 // rotating the agents.
 
 
-#define DEBUG0 1  // slotupdates
+#define DEBUG0 0  // slotupdates
 #define DEBUG1 1  // animations
 #define DEBUG2 0  // mkanimslist()
-#define DEBUG3 0
+#define DEBUG3 0  // stuff in the timer
 
 
 #include <lslstddef.h>
@@ -43,11 +43,10 @@
 int status = 0;
 #define stSLOTS_RCV                1
 #define stFACE_ANIM_GOT            2
-#define stFACE_ANIM_DOING          4
 #define stNO_RECURSE               8
 #define stIGNORE_RT_PERMS         16
 #define stDOSYNC                  32
-#define stFACE_ENABLE             64
+#define stFACE_DISABLE            64
 
 
 #define flagPERMS                  PERMISSION_TRIGGER_ANIMATION
@@ -58,19 +57,19 @@ int status = 0;
 
 
 // the last seat that was animated
+// needed to figure out which agent to animate next
+//
 int iLastAnimatedSeat;
-
 
 key kMYKEY;
 
 
-string currentanim;
-string lastAnimRunning;
-
-
 list slots;
 list faceTimes;
-// list lastanim;
+
+// list of animations not to stop
+//
+list lUnstoppable;
 
 
 //we need a list consisting of sitter key followed by each face anim and the associated time of each
@@ -101,6 +100,7 @@ void mkanimlist()
 								  {
 									  //collect the name of the anim and the time
 									  faces += ([llList2String(temp, 0), llList2Integer(temp, 1)]);
+									  xUnstoppableAdd(lUnstoppable, kSlots2Ava($_), llList2String(temp, 0));
 									  hasNewFaceTime = 1;
 								  }
 							  else
@@ -129,8 +129,7 @@ default
 		afootell(concat(concat(llGetScriptName(), " "), VERSION));
 
 		iLastAnimatedSeat = iUNDETERMINED;
-		lastAnimRunning = currentanim = "";
-		faceTimes = [];
+		lUnstoppable = faceTimes = [];
 		kMYKEY = llGenerateKey();
 	}
 
@@ -148,7 +147,7 @@ default
 						//
 						DEBUGmsg0("rcv slots start");
 
-						slots = [];
+						slots = lUnstoppable = [];
 						SetStatus(stSLOTS_RCV);
 						return;
 					}
@@ -162,7 +161,6 @@ default
 
 						UnStatus(stSLOTS_RCV);
 
-						UnStatus(stFACE_ANIM_DOING);
 						UnStatus(stFACE_ANIM_GOT);
 						faceTimes = [];
 
@@ -220,6 +218,13 @@ default
 		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY,
 					 DEBUGmsg0("single slot received");
 					 mkanimlist();
+					 int $_ = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
+					 LoopDown($_,
+						  if(NotOnlst(slots, kUnstoppableToAgent(lUnstoppable, $_)))
+							  {
+								  yUnstoppableRM(lUnstoppable, $_);
+							  }
+						  );
 					 when(kSlots2Ava(Len(slots) / stride - 1))
 					 {
 						 DEBUGmsg1("perm req after single slot update");
@@ -234,8 +239,8 @@ default
 
 				key av = llList2Key(llParseString2List(str, ["/"], []), 0);
 
-				SetStatus(stIGNORE_RT_PERMS);
 				DEBUGmsg1("perm req layer pose");
+				SetStatus(stIGNORE_RT_PERMS);
 				llRequestPermissions(av, flagPERMS);
 				UnStatus(stIGNORE_RT_PERMS);
 
@@ -273,16 +278,31 @@ default
 
 						if(cmd == "stopAll")
 							{
+								int weed = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
+								LoopDown(weed,
+									 when(kUnstoppableToAgent(lUnstoppable, weed) == av)
+									 {
+										 yUnstoppableRM(lUnstoppable, weed);
+									 }
+									 );
+
 								// see animslist.h
 								//
-								inlineAnimsStopAll(av);
+								inlineAnimsStopAll(av, lUnstoppable, ;);
 								return;
 							}
 
 						when(cmd == "stop")
 							{
 								DEBUGmsg1("stop single anim:", tmpANIM);
+
 								llStopAnimation(tmpANIM);
+								int $_ = LstIdx(lUnstoppable, tmpANIM);
+								unless(iIsUndetermined($_))
+									{
+										$_ /= iSTRIDE_lUnstoppable;
+										yUnstoppableRM(lUnstoppable, $_);
+									}
 							}
 						else
 							{
@@ -290,6 +310,7 @@ default
 									{
 										DEBUGmsg1("start single anim:", tmpANIM);
 										llStartAnimation(tmpANIM);
+										xUnstoppableAdd(lUnstoppable, av, tmpANIM);
 									}
 								else
 									{
@@ -324,6 +345,13 @@ default
 				MemTell;
 			}
 
+		if(iTOGGLE_FACIALS == num)
+			{
+				bool on = (str == "on");
+				CompStatus(stFACE_DISABLE, !on);
+
+				return;
+			}
 	}  // linked message
 
 	event run_time_permissions(integer perm)
@@ -342,93 +370,27 @@ default
 				return;
 			}
 
+		IfStatus(stIGNORE_RT_PERMS)
+		{
+			return;
+		}
+
 		DEBUGmsg("runtime perms triggered");
 
-
-		IfNStatus(stFACE_ANIM_DOING)
-		{
-			//get the current requested animation from list slots.
-			integer avIndex = llListFindList(slots, [agent]);
-			currentanim = llList2String(slots, avIndex - 4);
-
-			//look for the default LL 'Sit' animation.  We must stop this animation if it is running. New Sitter!
-			//
-			// Why must it be stopped?  Who says it´s playing?
-			//
-			integer indexx = llListFindList(llGetAnimationList(agent), [(key)"1a5fe8ac-a804-8a5d-7cbd-56bd83184568"]);
-
-			//we also need to know the last animation running.  Not New Sitter!
-			//lastanim is a 2 stride list [agent, last active animation name]
-			list lastanim = [];
-			//index agent as a string in the list and then we can find the last animation.
-			integer thisAvIndex = llListFindList(lastanim, [agent]);
-
-			IfNStatus(stDOSYNC)
-			{
-				if(indexx != -1)
-					{
-						lastAnimRunning = "sit";
-						lastanim += [agent, "sit"];
-					}
-
-				if(thisAvIndex != -1)
-					{
-						lastAnimRunning = llList2String(lastanim, thisAvIndex + 1);
-					}
-
-				//now we know which animation to stop so go ahead and stop it.
-				if(lastAnimRunning != "")
-					{
-						llStopAnimation(lastAnimRunning);
-					}
-
-				//now that we have the name of the last animation running, we can update the list with current animation.
-				thisAvIndex = llListFindList(lastanim, [agent]);
-				when(iIsUndetermined(thisAvIndex))
-					{
-						lastanim += [agent, currentanim];
-						DEBUGmsg1("length lastanim:", Len(lastanim), ":", llList2CSV(lastanim));
-					}
-				else
-					{
-						lastanim = llListReplaceList(lastanim, [agent, currentanim], thisAvIndex, thisAvIndex + 1);
-					}
-
-				llStartAnimation(currentanim);
-			}
-			else
-				{
-					//
-					// why restart the animation all the time??
-					//
-
-					llStopAnimation(currentanim);
-					llStartAnimation("sit");
-					llSleep(0.05);
-					llStopAnimation("sit");
-					llStartAnimation(currentanim);
-				}
-		}
+		// Stop all anims in inventory that aren´t in the slot
+		// and stoppable, and start the animation in the slot.
+		//
+		inlineAnimsStopAll(agent, lUnstoppable, llStartAnimation(sSlots2Pose(slot)); xUnstoppableAdd(lUnstoppable, agent, sSlots2Pose(slot)); DEBUGmsg1("started animation", sSlots2Pose(slot)));
 
 		//start timer if we have face anims for any slot
 		//
-		// What kind of status usage is this???
-		//
 		IfStatus(stFACE_ANIM_GOT)
 		{
-			IfNStatus(stFACE_ANIM_DOING)
-			{
-				llSetTimerEvent(1.0);
-				SetStatus(stFACE_ANIM_DOING);
-			}
+			llSetTimerEvent(1.0);
 		}
 		else
 			{
-				IfStatus(stFACE_ANIM_DOING)
-				{
-					llSetTimerEvent(0.0);
-					UnStatus(stFACE_ANIM_DOING);
-				}
+				llSetTimerEvent(0.0);
 			}
 
 
@@ -467,14 +429,12 @@ default
 		iLastAnimatedSeat = iUNDETERMINED;
 	}
 
-
-
-
-	timer()
+	event timer()
 		{
-			IfNStatus(stFACE_ENABLE)
+			IfStatus(stFACE_DISABLE)
 			{
 				llSetTimerEvent(0.0);
+				DEBUGmsg3("faces not enabled");
 				return;
 			}
 
@@ -513,7 +473,6 @@ default
 #if 0
 									if(facecount && sits(thisAV))  //modified cause face anims were being imposed after AV stands.
 										{
-											SetStatus(stFACE_ANIM_DOING);
 											thisAV = llGetPermissionsKey();
 											llRequestPermissions(av, flagPERMS);
 										}
@@ -546,7 +505,6 @@ default
 								//if we have facial anims make sure we have permissions for this av
 								if((facecount > 0) && sits(thisAV))    //modified cause face anims were being imposed after AV stands.
 									{
-										SetStatus(stFACE_ANIM_DOING);
 										thisAV = llGetPermissionsKey();
 										llRequestPermissions(av, flagPERMS);
 									}
@@ -593,28 +551,8 @@ default
 					// nobody sits on object
 
 					llSetTimerEvent(0.0);
-					UnStatus(stFACE_ANIM_DOING);
 				}
 
 			UnStatus(stNO_RECURSE);
-		}
-
-
-
-		changed(integer change)
-		{
-			if(change & CHANGED_LINK)
-				{
-					// this will break when an agent stands up while others are still sitting
-					//
-					// lastanim needs to be maintained better
-					//
-					when(llGetAgentSize(llGetLinkKey(llGetNumberOfPrims())) == ZERO_VECTOR)
-						{
-							//no AV's seated so clear the lastanim list.  done so we can detect LL's default Sit when reseating.
-							// lastanim = [];
-							lastAnimRunning = currentanim = "";
-						}
-				}
 		}
 }

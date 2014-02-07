@@ -22,7 +22,7 @@
 
 #define DEBUG0 0  // card reading
 #define DEBUG1 0  // listener
-#define DEBUG2 1  // assigning slots
+#define DEBUG2 0  // assigning slots
 #define DEBUG3 0  // slotMax, assigning slots, sending slots
 
 // #define DEBUG_tellmem  // memory info

@@ -44,43 +44,64 @@ list animsList;  // agent uuid, string1, string2
 #endif
 
 
-// inlineAnimsStopAll(_foragent, _len)
+// list of agent, animation
+// holds animations not to stop from playing
 //
-// stop all animations for agent and delete all entries of agent from
-// animslist
+#define iSTRIDE_lUnstoppable                                2
+
+#define iIDX_lUnstoppable_Agent                             0
+#define iIDX_lUnstoppable_Anim                              1
+
+#define kUnstoppableToAgent(_lunstoppable, _stride)         llList2Key(_lunstoppable, _stride * iSTRIDE_lUnstoppable + iIDX_lUnstoppable_Agent)
+#define sUnstoppableToAnim(_lunstoppable, _stride)          llList2String(_lunstoppable, _stride * iSTRIDE_lUnstoppable + iIDX_lUnstoppable_Anim)
+
+#define xUnstoppableAdd(_lunstoppable, _agent, _anim)       Enlist(_lunstoppable, _agent, _anim)
+#define yUnstoppableRM(_lunstoppable, _stride)              (_lunstoppable = llDeleteSubList(_lunstoppable, _stride * iSTRIDE_lUnstoppable, _stride * iSTRIDE_lUnstoppable + iSTRIDE_lUnstoppable - 1))
+
+
+// inlineAnimsStopAll(_foragent, _lunstoppable, _do)
 //
-// Why can there be empty entries on the animslist?
+// stop all animations for agent which are in inventory and not
+// in the list of unstoppable animations for that agent
 //
-#define inlineAnimsStopAll(_foragent)					\
+#define inlineAnimsStopAll(_foragent, _lunstoppable, _do)		\
+	DEBUGmsg1("---------- stopAll ----------");			\
+	int slot = LstIdx(slots, _foragent) / stride;			\
+					    				\
+					    unless(iIsUndetermined(slot)) \
 	{								\
-		DEBUGmsg1("---------- stopAll ----------");		\
-		int slot = LstIdx(slots, _foragent) / stride;		\
+		list notstop = [];					\
+		int $_ = Len(_lunstoppable) / iSTRIDE_lUnstoppable;	\
+		LoopDown($_,						\
+			 when(kUnstoppableToAgent(_lunstoppable, $_) == _foragent) \
+			 {						\
+				 notstop += sUnstoppableToAnim(_lunstoppable, $_); \
+			 }						\
+			 );						\
+		DEBUGmsg1("not stopping:", llList2CSV(notstop));	\
 									\
-		unless(iIsUndetermined(slot))				\
-			{						\
-				int $_ = llGetInventoryNumber(INVENTORY_ANIMATION); \
+		$_ = llGetInventoryNumber(INVENTORY_ANIMATION);		\
 									\
-				LoopDown($_,				\
-					 string iname = llGetInventoryName(INVENTORY_ANIMATION, $_); \
-					 DEBUGmsg1("\t\tinventory:", llGetInventoryKey(iname), iname); \
-					 when(sSlots2Pose(slot) != iname) \
+		string anim = sSlots2Pose(slot);			\
+		LoopDown($_,						\
+			 string iname = llGetInventoryName(INVENTORY_ANIMATION, $_); \
+			 DEBUGmsg1("\t\tinventory:", llGetInventoryKey(iname), iname); \
+			 when(anim != iname)				\
+			 {						\
+				 if(NotOnlst(notstop, iname))		\
 					 {				\
 						 llStopAnimation(iname); \
-						 DEBUGmsg2("stopping animation:", iname); \
+						 DEBUGmsg1("stopping animation:", iname); \
 					 }				\
-					 else				\
-						 {			\
-							 DEBUGmsg2("--- anim in slot:", iname);	\
-						 }			\
-					 );				\
-			}						\
-		else							\
-			{						\
-				ERRORmsg("agent has no slot");		\
-				return;					\
-			}						\
-		DEBUGmsg1("anims playing:", llList2CSV(llGetAnimationList(_foragent)));	\
-	}
+			 }						\
+			 );						\
+		_do;							\
+	}								\
+					    else			\
+						    {			\
+							    ERRORmsg("agent has no slot"); \
+						    }			\
+	DEBUGmsg1("anims playing:", llList2CSV(llGetAnimationList(_foragent)))
 
 
 

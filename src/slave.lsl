@@ -50,7 +50,6 @@ int status = 0;
 #define stFACE_ANIM_DOING          2
 #define stFACE_ANIM_GOT            4
 #define stSLOTS_RCV                8
-#define stFACE_ENABLE             16
 #define stIGNORE_RT_PERMS         32
 
 
@@ -300,14 +299,6 @@ default
 						//
 						doSeats(index);
 					}
-
-				return;
-			}
-
-		if(iTOGGLE_FACIALS == num)
-			{
-				bool on = (str == "on");
-				CompStatus(stFACE_ENABLE, on);
 
 				return;
 			}
