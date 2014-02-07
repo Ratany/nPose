@@ -59,21 +59,6 @@ int status = 0;
 integer chatchannel;
 
 
-
-integer newprimcount;
-
-// ?
-integer primcount;
-
-// use in for loops, should be local
-//
-integer seatcount;
-
-// declared locally as well, purpose unknown
-//
-// integer stop;
-
-
 // used to prevent receiving slot updates sent by self
 //
 key kMYKEY;
@@ -81,27 +66,13 @@ key kMYKEY;
 key thisAV;
 
 
-// can probably be local
-//
-string currentanim;
-
-
-// can probably be local
-//
-string lastAnimRunning;
-
 
 
 list adjusters = [];
-list avatarOffsets;  // agent uuid, vector offset
-list faceTimes = [];
-list faceanims;
-list lastanim;
+list avatarOffsets = [];  // agent uuid, vector offset
 list slots;
 
 
-// #define DEBUG_Showanimslist
-#include <slave-animslist.h>
 
 
 #define flagPERMS                  (PERMISSION_TRIGGER_ANIMATION)
@@ -134,10 +105,6 @@ void doSeats(integer slotNum)
 		{
 			return;
 		}
-
-	// virtualinlinePrintSingleSlot(slots, slotNum);
-
-	UnStatus(stFACE_ANIM_DOING);
 
 	//
 	// Position and rotate the sitting agents according to
@@ -237,8 +204,6 @@ default
 		kMYKEY = llGenerateKey();
 
 		llMessageLinked(LINK_SET, SEND_CHATCHANNEL, "", "");
-		primcount = llGetNumberOfPrims();
-		newprimcount = primcount;
 	}
 
 	event link_message(integer sender, integer num, string str, key id)
@@ -272,69 +237,6 @@ default
 						// tell the menu to update all buttons
 						//
 						llMessageLinked(LINK_SET, iBUTTONUPDATE, "", NULL_KEY);
-
-						//we need a list consisting of sitter key followed by each face anim and the associated time of each
-						// put face anims for each slot into a list
-						{
-							// DEBUG_virtualShowSlots(slots);
-
-							UnStatus(stFACE_ANIM_GOT);
-							faceTimes = [];
-
-							int $_ = Len(slots) / stride;
-							LoopDown($_,
-								 if(kSlots2Ava($_))
-									 {
-										 if(sSlots2Facials($_))
-											 {
-												 list faceanimsTemp = llParseString2List(sSlots2Facials($_), ["~"], []);
-												 DEBUGmsg0("face anims temp:", llList2CSV(faceanimsTemp));
-												 list faces = [];
-												 integer hasNewFaceTime = 0;
-												 integer nFace = Len(faceanimsTemp);
-
-												 LoopDown(nFace,
-													  //parse this face anim for anim name and time
-													  list temp = llParseString2List(llList2String(faceanimsTemp, nFace), ["="], []);
-													  //time must be optional so we will make default a zero
-													  //queue on zero to revert to older stuff
-													  if(llList2String(temp, 1))
-														  {
-															  //collect the name of the anim and the time
-															  faces += ([llList2String(temp, 0), llList2Integer(temp, 1)]);
-															  hasNewFaceTime = 1;
-														  }
-													  else
-														  {
-															  faces += ([llList2String(temp, 0), -1]);
-														  }
-													  );
-
-												 SetStatus(stFACE_ANIM_GOT);
-												 //add sitter key and flag if timer defined followed by a stride 2 list containing face anim name and associated time
-												 faceTimes += ([kSlots2Ava($_), hasNewFaceTime, Len(faceanimsTemp)] + faces);
-												 DEBUGmsg0("adding to faceTimes:", llList2CSV([kSlots2Ava($_), hasNewFaceTime, Len(faceanimsTemp)] + faces));
-											 }
-									 }
-								 );
-
-							// DEBUG_virtualShowSlots(slots);
-
-						}
-
-						{
-							// Once alls slots have been received, everyone is rotated and positioned,
-							// and the face anims list has been created. Ask someone for perms to
-							// initiate playing the facials.
-							//
-							// requesting perms from a prim yields a script error
-							//
-							key agent = llGetLinkKey(llGetNumberOfPrims());
-							when(AgentIsHere(agent))
-								{
-									llRequestPermissions(agent, flagPERMS);
-								}
-						}
 
 						return;
 					}
@@ -381,86 +283,6 @@ default
 				return;
 			}
 
-		if(num == layerPose)
-			{
-				DEBUGmsg0("layer pose message rcvd:", str);
-
-				key av = llList2Key(llParseString2List(str, ["/"], []), 0);
-
-				if(!sits(av))
-					{
-						DEBUGmsg0(av, "is not sitting");
-						return;
-					}
-
-				SetStatus(stIGNORE_RT_PERMS);
-				llRequestPermissions(av, flagPERMS);
-				UnStatus(stIGNORE_RT_PERMS);
-
-				// Returns the key of the avatar that last granted or declined
-				// permissions to the script.
-				//
-				// --> That can be anyone ...
-				//
-				if(llGetPermissionsKey() != av)
-					{
-						ERRORmsg("unexpected agent change");
-						return;
-					}
-
-				// starting and stopping animations can only be done when permissions
-				// have been granted
-				//
-				// Since agents not granting perms are unsat, it can be assumed that
-				// the permission has been granted.
-				//
-
-				list tempList1 = llParseString2List(llList2String(llParseString2List(str, ["/"], []), 1), ["~"], []);
-				integer n;  // instruction
-				integer layerStop = llGetListLength(tempList1);
-
-
-				for(n = 0; n < layerStop; ++n)
-					{
-						list tempList = llParseString2List(llList2String(tempList1, n), [","], []);
-
-#define tmpCMD                     llList2String(tempList, 0)
-#define tmpANIM                    llList2String(tempList, 1)
-
-						string cmd = tmpCMD;
-
-						if(cmd == "stopAll")
-							{
-								// see slave-animslist.h
-								//
-								inlineAnimsStopAll(av);
-								return;
-							}
-
-						when(cmd == "stop")
-							{
-								DEBUGmsg1("stop single anim:", tmpANIM);
-								llStopAnimation(tmpANIM);
-							}
-						else
-							{
-								when(cmd == "start")
-									{
-										DEBUGmsg1("start single anim:", tmpANIM);
-										llStartAnimation(tmpANIM);
-									}
-								else
-									{
-										ERRORmsg("unknown cmd");
-									}
-							}
-					}
-#undef tmpCMD
-#undef tmpANIM
-
-				return;
-			}  // num == LayerPose
-
 		if((num == ADJUSTOFFSET) || (num == SETOFFSET))
 			{
 				vector $_ = (vector)str;
@@ -497,21 +319,6 @@ default
 				return;
 			}
 
-		if(num == SYNC)
-			{
-				SetStatus(stDOSYNC);
-				integer $_ = llGetListLength(slots) / 8;
-				LoopDown($_, key agent = kSlots2Ava($_); if(agent) { llRequestPermissions(agent, flagPERMS); doSeats($_); });
-
-				// after syncing is completed, unset the status
-				//
-				// Executing more code when explicitly syncing seems to be the only
-				// purpose for this status.
-				//
-				UnStatus(stDOSYNC);
-
-				return;
-			}
 
 		if(num == ADJUST)   //adjust has been chosen from the menu
 			{
@@ -611,239 +418,6 @@ default
 			}
 	}
 
-	event run_time_permissions(integer perm)
-	{
-		thisAV = llGetPermissionsKey();
-
-		unless((llGetPermissions() & flagPERMS))
-			{
-				// message to self
-				//
-				// core will update slots list on unsit
-				//
-				// This is probably not sane due to design.
-				//
-				llMessageLinked(LINK_THIS, iUNSIT, (string)thisAV, NULL_KEY);
-				return;
-			}
-
-		IfStatus(stIGNORE_RT_PERMS)
-		{
-			return;
-		}
-		ERRORmsg("runtime perms triggered");
-
-
-		IfNStatus(stFACE_ANIM_DOING)
-		{
-			//get the current requested animation from list slots.
-			integer avIndex = llListFindList(slots, [thisAV]);
-			currentanim = llList2String(slots, avIndex - 4);
-			//look for the default LL 'Sit' animation.  We must stop this animation if it is running. New Sitter!
-			list animsRunning = llGetAnimationList(thisAV);
-			integer indexx = llListFindList(animsRunning, [(key)"1a5fe8ac-a804-8a5d-7cbd-56bd83184568"]);
-			//we also need to know the last animation running.  Not New Sitter!
-			//lastanim is a 2 stride list [thisAV, last active animation name]
-			//index thisAV as a string in the list and then we can find the last animation.
-			integer thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
-
-			IfNStatus(stDOSYNC)
-			{
-				if(indexx != -1)
-					{
-						lastAnimRunning = "Sit";
-						lastanim += [(string)thisAV, "Sit"];
-					}
-
-				if(thisAvIndex != -1)
-					{
-						lastAnimRunning = llList2String(lastanim, thisAvIndex + 1);
-					}
-
-				//now we know which animation to stop so go ahead and stop it.
-				if(lastAnimRunning != "")
-					{
-						llStopAnimation(lastAnimRunning);
-					}
-
-				thisAvIndex = llListFindList(lastanim, [(string)thisAV]);
-				//now that we have the name of the last animation running, we can update the list with current animation.
-				lastanim = llListReplaceList(lastanim, [(string)thisAV, currentanim], thisAvIndex, thisAvIndex + 1);
-
-				if(avIndex != -1)
-					{
-						llStartAnimation(currentanim);
-					}
-			}
-			else
-				{
-					llStopAnimation(currentanim);
-					llStartAnimation("sit");
-					llSleep(0.05);
-					llStopAnimation("sit");
-					llStartAnimation(currentanim);
-				}
-		}
-
-		//start timer if we have face anims for any slot
-		IfStatus(stFACE_ANIM_GOT)
-		{
-			llSetTimerEvent(1.0);
-			SetStatus(stFACE_ANIM_DOING);
-		}
-		else
-			{
-				llSetTimerEvent(0.0);
-				UnStatus(stFACE_ANIM_DOING);
-			}
-
-
-		//check all the slots for next seated AV, call for next seated AV to move and animate.
-
-		// Apparently this is what was intended here --- but what exactly means "next seated AV"?
-		// This would have to go by seat numbers maybe, since there is no particular order to
-		// the sitting agents other than their seat numbers as they are in the slots list.
-		//
-		int $_ = LstIdx(slots, thisAV);
-		unless(iIsUndetermined($_))
-			{
-				$_ /= stride;
-				while($_ < Len(slots))
-					{
-						++$_;
-						if(kSlots2Ava($_))
-							{
-								if(kSlots2Ava($_) != thisAV)
-									{
-										llRequestPermissions(kSlots2Ava($_), flagPERMS);
-										return;
-									}
-							}
-					}
-			}
-		// /
-	}
-
-	timer()
-		{
-			IfNStatus(stFACE_ENABLE)
-			{
-				return;
-			}
-
-			integer n;
-			integer stop = llGetListLength(slots) / 8;
-			key av;
-			integer facecount;
-			integer faceindex;
-
-
-			for(n = 0; n < stop; ++n)
-				{
-					//doing each seat
-					av = (key)llList2String(slots, n * 8 + 4);
-					faceindex = 0;
-					//locate our stride in faceTimes list
-					integer keyHasFacial = llListFindList(faceTimes, [av]);
-					//get number of face anims for this seat
-					integer newFaceTimeFlag = llList2Integer(faceTimes, keyHasFacial + 1);
-
-					if(newFaceTimeFlag == 0)
-						{
-							//need to know if someone seated in this seat, if not we won't do any facials
-							if(av != "")
-								{
-									faceanims = llParseString2List(llList2String(slots, n * 8 + 3), ["~"], []);
-									facecount = llGetListLength(faceanims);
-
-									if(facecount && sits(thisAV))  //modified cause face anims were being imposed after AV stands.
-										{
-											SetStatus(stFACE_ANIM_DOING);
-											thisAV = llGetPermissionsKey();
-											llRequestPermissions(av, flagPERMS);
-										}
-								}
-
-							integer x;
-
-							for(x = 0; x < facecount; ++x)
-								{
-									if(facecount > 0)
-										{
-											if(faceindex < facecount)
-												{
-													if(boolAvValidLinkNum(av))
-														{
-															llStartAnimation(llList2String(faceanims, faceindex));
-														}
-												}
-
-											faceindex++;
-										}
-								}
-						}
-					else
-						if(av != "")
-							{
-								//need to know if someone seated in this seat, if not we won't do any facials
-								//do our stuff with defined facial times
-								facecount = llList2Integer(faceTimes, keyHasFacial + 2);
-
-								//if we have facial anims make sure we have permissions for this av
-								if((facecount > 0) && sits(thisAV))    //modified cause face anims were being imposed after AV stands.
-									{
-										SetStatus(stFACE_ANIM_DOING);
-										thisAV = llGetPermissionsKey();
-										llRequestPermissions(av, flagPERMS);
-									}
-
-								integer x;
-
-								for(x = 1; x <= facecount; ++x)
-									{
-										//non looping we check if anim has run long enough
-										if(faceindex < facecount)
-											{
-												integer faceStride = keyHasFacial + 1 + (x * 2);
-												string animName = llList2String(faceTimes, faceStride);
-
-												if(llList2Integer(faceTimes, faceStride + 1) > 0)
-													{
-														faceTimes = llListReplaceList(faceTimes, [llList2Integer(faceTimes, faceStride + 1) - 1],
-																	      faceStride + 1, faceStride + 1);
-													}
-
-												if(facecount > 0)
-													{
-														bool avln = boolAvValidLinkNum(av);
-														if(avln && llList2Integer(faceTimes, faceStride + 1) > 0)
-															{
-																llStartAnimation(animName);
-															}
-														else
-															if(avln != -1 && llList2Integer(faceTimes, faceStride + 1) == -1)
-																{
-																	llStartAnimation(animName);
-																}
-
-														faceindex++;
-													}
-											}
-									}
-
-							}
-				}
-
-			when((llGetNumberOfPrims() < 2) || (llGetAgentSize(llGetLinkKey(llGetNumberOfPrims())) == ZERO_VECTOR))
-				{
-					// nobody sits on object
-
-					llSetTimerEvent(0.0);
-					UnStatus(stFACE_ANIM_DOING);
-				}
-		}
-
-
 	object_rez(key id)
 		{
 			if(llKey2Name(id) == "Adjuster")
@@ -855,26 +429,6 @@ default
 					if(adjLen < (llGetListLength(slots) / 8))
 						{
 							RezNextAdjuster();
-						}
-				}
-		}
-
-	changed(integer change)
-		{
-			if(change & CHANGED_LINK)
-				{
-					integer newPrimCount1 = llGetNumberOfPrims();
-
-					// Huh, how many prim counters are there?
-					//
-					newprimcount = newPrimCount1;
-
-					if(newprimcount == primcount)
-						{
-							//no AV's seated so clear the lastanim list.  done so we can detect LL's default Sit when reseating.
-							lastanim = [];
-							currentanim = "";
-							lastAnimRunning = "";
 						}
 				}
 		}

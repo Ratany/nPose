@@ -1,6 +1,6 @@
 
-#ifndef _SLAVE_ANIMSLIST
-#define _SLAVE_ANIMSLIST
+#ifndef _ANIMSLIST
+#define _ANIMSLIST
 
 #define iSTRIDE_animslist          3
 list animsList;  // agent uuid, string1, string2
@@ -84,4 +84,4 @@ list animsList;  // agent uuid, string1, string2
 
 
 
-#endif  // _SLAVE_ANIMSLIST
+#endif  // _ANIMSLIST

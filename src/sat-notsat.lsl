@@ -142,8 +142,12 @@ default
 
 			if(num == memusage)
 				{
-					afootell(concat(concat(llGetScriptName(), " "), VERSION));
 					MemTell;
 				}
 		}
+
+	event state_entry()
+	{
+		afootell(concat(concat(llGetScriptName(), " "), VERSION));
+	}
 }

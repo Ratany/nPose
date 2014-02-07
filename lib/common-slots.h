@@ -51,6 +51,8 @@
 #define sSlots2Notsat(_strideidx)       llList2String   (slots, SLOTIDX_notsat   + stride * (_strideidx))
 #define sSlots2Seat(_strideidx)         llList2String   (slots, SLOTIDX_seatno   + stride * (_strideidx))
 
+#define iSlots2SeatNo(_strideidx)       ((int)Endstr(sSlots2Seat(_strideidx), Strlen(sSEAT)))
+
 #define yEnslotAgent(_k, _strideidx)    (slots = llListReplaceList(slots, [_k], SLOTIDX_agent + stride * (_strideidx), SLOTIDX_agent + stride * (_strideidx)))
 #define yUnenslotAgent(_strideidx)      yEnslotAgent("", _strideidx)
 
@@ -59,7 +61,7 @@
 //
 #define sSomeSlots2Seat(_l, _strideidx) llList2String   (_l, SLOTIDX_seatno   + stride * (_strideidx))
 
-#define iSlots2SeatNo(_strideidx)       ((int)Endstr(sSlots2Seat(_strideidx), 4))
+
 
 
 #define sToSlotsPose(_l, _strideidx)         llList2String   (_l, SLOTIDX_pose     + stride * (_strideidx))
@@ -302,12 +304,12 @@
 // _senderkey must be used to prevent scripts from acting on slot
 // updates they sent themselves!
 //
-#define virtualReceiveSlotSingle(_sfrom, _ldest, $_i, _senderkey, _mykey, _do) \
+#define virtualReceiveSlotSingle(_smsg, _ldest, $_i, _senderkey, _mykey, _do) \
 	if(iSLOTINFO_SINGLE == ($_i))					\
 		{							\
 			if(_mykey != _senderkey)			\
 				{					\
-					list $_l = llParseStringKeepNulls(_sfrom, ["^"], []); \
+					list $_l = llParseStringKeepNulls(_smsg, ["^"], []); \
 					int $_slotnum = LstIdx(_ldest, sSomeSlots2Seat($_l, 0)); \
 					unless(iIsUndetermined($_slotnum)) \
 						{			\
