@@ -27,7 +27,7 @@
 
 
 #define DEBUG0 0  // slotupdates
-#define DEBUG1 1  // animations
+#define DEBUG1 0  // animations
 #define DEBUG2 0  // mkanimslist()
 #define DEBUG3 0  // stuff in the timer
 
@@ -67,7 +67,15 @@ key kMYKEY;
 list slots;
 list faceTimes;
 
+
 // list of animations not to stop
+//
+// These anims are not stopped when anims are stopped, and they are
+// started.
+//
+// see animslist.h
+//
+// [agent uuid, anim name]
 //
 list lUnstoppable;
 
@@ -75,7 +83,7 @@ list lUnstoppable;
 //we need a list consisting of sitter key followed by each face anim and the associated time of each
 // put face anims for each slot into a list
 //
-// rebuild the list for all slots :/
+// for now, rebuild the list for all slots :/
 //
 void mkanimlist()
 {
@@ -100,13 +108,13 @@ void mkanimlist()
 								  {
 									  //collect the name of the anim and the time
 									  faces += ([llList2String(temp, 0), llList2Integer(temp, 1)]);
-									  xUnstoppableAdd(lUnstoppable, kSlots2Ava($_), llList2String(temp, 0));
 									  hasNewFaceTime = 1;
 								  }
 							  else
 								  {
 									  faces += ([llList2String(temp, 0), -1]);
 								  }
+							  xUnstoppableAdd(lUnstoppable, kSlots2Ava($_), llList2String(temp, 0));
 							  );
 
 						 SetStatus(stFACE_ANIM_GOT);
@@ -147,7 +155,15 @@ default
 						//
 						DEBUGmsg0("rcv slots start");
 
-						slots = lUnstoppable = [];
+						// reset the slots list
+						//
+						slots = [];
+
+						// stop the timer for the while so it doesn´t mess with anything
+						// and actually _is_ stopped --- not strictly needed here, but
+						// doesn´t hurt
+						//
+						llSetTimerEvent(0.0);
 						SetStatus(stSLOTS_RCV);
 						return;
 					}
@@ -161,35 +177,47 @@ default
 
 						UnStatus(stSLOTS_RCV);
 
-						UnStatus(stFACE_ANIM_GOT);
-						faceTimes = [];
 
+						// reset ...
+						//
+						UnStatus(stFACE_ANIM_GOT);
+						lUnstoppable = faceTimes = [];
+
+						// must be rebuilt for all slots here
+						//
 						mkanimlist();
 
 						// reset this because a new cycle starts
 						//
 						iLastAnimatedSeat = iUNDETERMINED;
 						UnStatus(stNO_RECURSE);
-						// /
 
 						// Once alls slots have been received
 						// and the face anims list has been created, ask someone for perms to
-						// initiate playing the facials.
+						// initiate playing animations.
 						//
-						// requesting perms from a prim yields a script error
+						// requesting perms from a prim yields a script error ...
 						//
 						key agent = llGetLinkKey(llGetNumberOfPrims());
-						when(AgentIsHere(agent))
+						when(AgentIsHere(agent))  // no point in animating when nobody is here ...
 							{
 								int $_ = LstIdx(slots, agent);
-								unless(iIsUndetermined($_))
+								unless(iIsUndetermined($_))  // ... or when the last sitter doesn´t have a slot
 									{
-										iLastAnimatedSeat = iSlots2SeatNo($_);
 										DEBUGmsg1("perm req after full slot update");
 										llRequestPermissions(agent, flagPERMS);
+										return;
 									}
 							}
-
+						//
+						// Note: When the last sitter doesn´t have a slot, the core will unsit
+						// them and send a slot update.  Unfortunately, this doesn´t mean that
+						// anyone will be animated.  Hence:
+						//
+						int $_ = Len(slots) / stride;
+						LoopDown($_, agent = kSlots2Ava($_); if(agent) { llRequestPermissions(agent, flagPERMS); return; });
+						//
+						// ... and if there really is nobody there, there do nothing:
 						return;
 					}
 
@@ -205,6 +233,13 @@ default
 					DEBUGmsg0("rcv a slot:", str);
 					ySlotsAddStride(thisslot, slots);
 
+					// update the list of unstoppable anims with every slot received
+					//
+					when(kSlots2Ava(Len(slots) / stride - 1))
+						{
+							xUnstoppableAdd(lUnstoppable, kSlots2Ava(Len(slots) / stride - 1), sSlots2Pose(Len(slots) / stride - 1));
+						}
+
 					return;
 				}
 
@@ -217,7 +252,17 @@ default
 		//
 		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY,
 					 DEBUGmsg0("single slot received");
+
+					 // rebuild the list --- should only rebuild the slot that has
+					 // been updated here
+					 //
 					 mkanimlist();
+
+					 // update the list of unstoppable anims for the agent the
+					 // updated slot is assigned to:  remove all entries for
+					 // agents who don´t have a slot assigned from the list
+					 // of unstoppable anims
+					 //
 					 int $_ = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
 					 LoopDown($_,
 						  if(NotOnlst(slots, kUnstoppableToAgent(lUnstoppable, $_)))
@@ -225,9 +270,16 @@ default
 								  yUnstoppableRM(lUnstoppable, $_);
 							  }
 						  );
+
+					 // if the updated slot has an agent assigned, add the animation from
+					 // the slot to the list of unstoppable anims for this agent; then ask
+					 // for perms to animate the agent
+					 //
 					 when(kSlots2Ava(Len(slots) / stride - 1))
 					 {
 						 DEBUGmsg1("perm req after single slot update");
+						 xUnstoppableAdd(lUnstoppable, kSlots2Ava(Len(slots) / stride - 1), sSlots2Pose(Len(slots) / stride - 1));
+						 SetStatus(stNO_RECURSE);
 						 llRequestPermissions(kSlots2Ava(Len(slots) / stride - 1), flagPERMS);
 					 }
 					 );
@@ -235,97 +287,98 @@ default
 
 		if(num == layerPose)
 			{
+				// Starting and stopping animations can only be done when permissions
+				// have been granted.
+				//
+
 				DEBUGmsg0("layer pose message rcvd:", str);
 
 				key av = llList2Key(llParseString2List(str, ["/"], []), 0);
-
-				DEBUGmsg1("perm req layer pose");
-				SetStatus(stIGNORE_RT_PERMS);
-				llRequestPermissions(av, flagPERMS);
-				UnStatus(stIGNORE_RT_PERMS);
-
-				// Returns the key of the avatar that last granted or declined
-				// permissions to the script.
-				//
-				// --> That can be anyone ...
-				//
-				if(llGetPermissionsKey() != av)
+				if(av)
 					{
-						ERRORmsg("unexpected agent change");
-						return;
-					}
+						// figure out what to do
+						//
+						list tempList1 = llParseString2List(llList2String(llParseString2List(str, ["/"], []), 1), ["~"], []);
 
-				// starting and stopping animations can only be done when permissions
-				// have been granted
-				//
-				// Since agents not granting perms are unsat, it can be assumed that
-				// the permission has been granted.
-				//
-
-				list tempList1 = llParseString2List(llList2String(llParseString2List(str, ["/"], []), 1), ["~"], []);
-				integer n;  // instruction
-				integer layerStop = llGetListLength(tempList1);
-
-
-				for(n = 0; n < layerStop; ++n)
-					{
-						list tempList = llParseString2List(llList2String(tempList1, n), [","], []);
+						integer layerStop = llGetListLength(tempList1);
+						integer n;  // instruction
+						for(n = 0; n < layerStop; ++n)
+							{
+								list tempList = llParseString2List(llList2String(tempList1, n), [","], []);
 
 #define tmpCMD                     llList2String(tempList, 0)
 #define tmpANIM                    llList2String(tempList, 1)
 
-						string cmd = tmpCMD;
+								string cmd = tmpCMD;
 
-						if(cmd == "stopAll")
-							{
-								int weed = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
-								LoopDown(weed,
-									 when(kUnstoppableToAgent(lUnstoppable, weed) == av)
-									 {
-										 yUnstoppableRM(lUnstoppable, weed);
-									 }
-									 );
-
-								// see animslist.h
-								//
-								inlineAnimsStopAll(av, lUnstoppable, ;);
-								return;
-							}
-
-						when(cmd == "stop")
-							{
-								DEBUGmsg1("stop single anim:", tmpANIM);
-
-								llStopAnimation(tmpANIM);
-								int $_ = LstIdx(lUnstoppable, tmpANIM);
-								unless(iIsUndetermined($_))
+								if(cmd == "stopAll")
 									{
-										$_ /= iSTRIDE_lUnstoppable;
-										yUnstoppableRM(lUnstoppable, $_);
-									}
-							}
-						else
-							{
-								when(cmd == "start")
-									{
-										DEBUGmsg1("start single anim:", tmpANIM);
-										llStartAnimation(tmpANIM);
-										xUnstoppableAdd(lUnstoppable, av, tmpANIM);
+										// Remove all anims for this agent from the list of
+										// unstoppable animations.  They will be stopped in
+										// the perms event.
+										//
+										DEBUGmsg1("stop all anims");
+
+										int weed = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
+										LoopDown(weed,
+											 when(kUnstoppableToAgent(lUnstoppable, weed) == av)
+											 {
+												 yUnstoppableRM(lUnstoppable, weed);
+											 }
+											 );
 									}
 								else
 									{
-										ERRORmsg("unknown cmd");
+										when(cmd == "stop")
+											{
+												// Remove a particular anim for this agent
+												// from the list of unstoppable anims.
+												// It will be stopped in the perms event.
+												//
+												DEBUGmsg1("stop single anim:", tmpANIM);
+
+												int $_ = LstIdx(lUnstoppable, tmpANIM);
+												unless(iIsUndetermined($_))
+													{
+														$_ /= iSTRIDE_lUnstoppable;
+														yUnstoppableRM(lUnstoppable, $_);
+													}
+											}
+										else
+											{
+												when(cmd == "start")
+													{
+														// Add a particular anim for this agent
+														// to the list of unstoppable anims.
+														// It will be started in the perms event.
+														//
+														DEBUGmsg1("start single anim:", tmpANIM);
+														xUnstoppableAdd(lUnstoppable, av, tmpANIM);
+													}
+												else
+													{
+														ERRORmsg("unknown cmd");
+													}
+											}
 									}
-							}
-					}
+							}  // for()
 #undef tmpCMD
 #undef tmpANIM
 
+						// Processing the animation change(s) has completed.  Now trigger the
+						// perms event to apply the changes.
+						//
+						DEBUGmsg1("request perms to apply animation changes");
+						SetStatus(stNO_RECURSE);
+						llRequestPermissions(av, flagPERMS);
+					}
 				return;
 			}  // num == LayerPose
 
 		if(num == SYNC)
 			{
+				ERRORmsg("method not yet implemented");
+#if 0
 				SetStatus(stDOSYNC);
 				integer $_ = llGetListLength(slots) / 8;
 				LoopDown($_, key agent = kSlots2Ava($_); if(agent) { DEBUGmsg1("perm req sync"); llRequestPermissions(agent, flagPERMS); });
@@ -336,6 +389,7 @@ default
 				// purpose for this status.
 				//
 				UnStatus(stDOSYNC);
+#endif
 
 				return;
 			}
@@ -370,17 +424,12 @@ default
 				return;
 			}
 
-		IfStatus(stIGNORE_RT_PERMS)
-		{
-			return;
-		}
-
 		DEBUGmsg("runtime perms triggered");
 
 		// Stop all anims in inventory that aren´t in the slot
 		// and stoppable, and start the animation in the slot.
 		//
-		inlineAnimsStopAll(agent, lUnstoppable, llStartAnimation(sSlots2Pose(slot)); xUnstoppableAdd(lUnstoppable, agent, sSlots2Pose(slot)); DEBUGmsg1("started animation", sSlots2Pose(slot)));
+		inlineAnimsStopAll(agent, lUnstoppable, DEBUGmsg1("started animation", sSlots2Pose(slot)));
 
 		//start timer if we have face anims for any slot
 		//

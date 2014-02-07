@@ -67,7 +67,6 @@ list animsList;  // agent uuid, string1, string2
 #define inlineAnimsStopAll(_foragent, _lunstoppable, _do)		\
 	DEBUGmsg1("---------- stopAll ----------");			\
 	int slot = LstIdx(slots, _foragent) / stride;			\
-					    				\
 					    unless(iIsUndetermined(slot)) \
 	{								\
 		list notstop = [];					\
@@ -76,6 +75,8 @@ list animsList;  // agent uuid, string1, string2
 			 when(kUnstoppableToAgent(_lunstoppable, $_) == _foragent) \
 			 {						\
 				 notstop += sUnstoppableToAnim(_lunstoppable, $_); \
+				 llStartAnimation(sUnstoppableToAnim(_lunstoppable, $_)); \
+				 DEBUGmsg1("started anim:", sUnstoppableToAnim(_lunstoppable, $_)); \
 			 }						\
 			 );						\
 		DEBUGmsg1("not stopping:", llList2CSV(notstop));	\
