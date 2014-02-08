@@ -29,7 +29,9 @@
 #define DEBUG0 0  // slotupdates
 #define DEBUG1 0  // animations
 #define DEBUG2 0  // mkanimslist()
-#define DEBUG3 0  // stuff in the timer
+#define DEBUG3 1  // repeated anims
+
+// #define _STD_DEBUG_PUBLIC
 
 
 #include <lslstddef.h>
@@ -87,9 +89,22 @@ list lUnstoppable;
 //
 void mkanimlist()
 {
+	//
+	// "time" means to repeat the animation only so often
+	//
+	// builds the list 'faceTimes'
+	//
+
+	// just rebuild the whole list --- figuring out what actually changed on
+	// updating a single slot and applying only the change doesn´t seem to
+	// be worthwhile
+	//
+	faceTimes = [];
+
 	int $_ = Len(slots) / stride;
 	LoopDown($_,
-		 if(kSlots2Ava($_))
+		 key agent = kSlots2Ava($_);
+		 if(agent)
 			 {
 				 if(sSlots2Facials($_))
 					 {
@@ -102,29 +117,42 @@ void mkanimlist()
 						 LoopDown(nFace,
 							  //parse this face anim for anim name and time
 							  list temp = llParseString2List(llList2String(faceanimsTemp, nFace), ["="], []);
+							  DEBUGmsg2("len temp:", Len(temp));
 							  //time must be optional so we will make default a zero
 							  //queue on zero to revert to older stuff
-							  if(llList2String(temp, 1))
-								  {
-									  //collect the name of the anim and the time
-									  faces += ([llList2String(temp, 0), llList2Integer(temp, 1)]);
-									  hasNewFaceTime = 1;
-								  }
+							  when(Len(temp) > 1)
+							  {
+								  if(llList2String(temp, 1))
+									  {
+										  //collect the name of the anim and the time
+										  faces += ([llList2String(temp, 0), llList2Integer(temp, 1)]);
+										  hasNewFaceTime = 1;
+										  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0));  // uses Enlist()
+									  }
+							  }
 							  else
 								  {
-									  faces += ([llList2String(temp, 0), -1]);
+									  when(Len(temp))
+										  {
+											  if(llList2String(temp, 0))
+												  {
+													  faces += ([llList2String(temp, 0), -1]);
+													  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0));  // uses Enlist()
+												  }
+										  }
 								  }
-							  xUnstoppableAdd(lUnstoppable, kSlots2Ava($_), llList2String(temp, 0));
 							  );
 
 						 SetStatus(stFACE_ANIM_GOT);
 
 						 //add sitter key and flag if timer defined followed by a stride 2 list containing face anim name and associated time
-						 DEBUGmsg2("adding to faceTimes:", llList2CSV([kSlots2Ava($_), hasNewFaceTime, Len(faceanimsTemp)] + faces));
-						 faceTimes += ([kSlots2Ava($_), hasNewFaceTime, Len(faceanimsTemp)] + faces);
+						 faceTimes += ([agent, hasNewFaceTime, Len(faceanimsTemp)]) + faces;
+						 DEBUGmsg2("added repeating anim:", llList2CSV(([agent, hasNewFaceTime, Len(faceanimsTemp)]) + faces));
 					 }
 			 }
 		 );
+
+	DEBUGmsg2("list rebuilt");
 }
 
 
@@ -181,9 +209,9 @@ default
 						// reset ...
 						//
 						UnStatus(stFACE_ANIM_GOT);
-						lUnstoppable = faceTimes = [];
+						lUnstoppable = [];
 
-						// must be rebuilt for all slots here
+						// reset and rebuild
 						//
 						mkanimlist();
 
@@ -248,13 +276,10 @@ default
 			}  // seatupdate
 
 
-		// ADD: GIVE PARAM TO MKANIMLIST() TO REBUILD A SINGLE SLOT ...
-		//
 		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY,
 					 DEBUGmsg0("single slot received");
 
-					 // rebuild the list --- should only rebuild the slot that has
-					 // been updated here
+					 // reset and rebuild the list
 					 //
 					 mkanimlist();
 

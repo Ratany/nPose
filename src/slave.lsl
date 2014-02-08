@@ -218,7 +218,7 @@ default
 
 		kMYKEY = llGenerateKey();
 
-		llMessageLinked(LINK_SET, SEND_CHATCHANNEL, "", "");
+		// llMessageLinked(LINK_SET, SEND_CHATCHANNEL, "", "");
 	}
 
 	event link_message(integer sender, integer num, string str, key id)

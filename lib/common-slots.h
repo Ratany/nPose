@@ -74,16 +74,22 @@
 #define sToSlotsSeat(_l, _strideidx)         llList2String   (_l, SLOTIDX_seatno   + stride * (_strideidx))
 
 
+#ifdef _STD_DEBUG_PUBLIC
+#define fff apf
+#else
+#define fff opf
+#endif
+
 #define virtualinlinePrintSingleSlot(_list, _slotnum)			\
 	DEBUGmsg("---------- stride:", _slotnum, "of", Len(_list) / stride, "----------"); \
-	opf("pose:", sSlots2Pose(_slotnum));				\
-	opf("pos :", vSlots2Position(_slotnum));			\
-	opf("rot :", rSlots2Rot(_slotnum));				\
-	opf("face:", sSlots2Facials(_slotnum));				\
-	opf("ava :", kSlots2Ava(_slotnum));				\
-	opf("sat :", sSlots2Satmsg(_slotnum));				\
-	opf("not :", sSlots2Notsat(_slotnum));				\
-	opf("seat:", sSlots2Seat(_slotnum))
+	fff("pose:", sSlots2Pose(_slotnum));				\
+	fff("pos :", vSlots2Position(_slotnum));			\
+	fff("rot :", rSlots2Rot(_slotnum));				\
+	fff("face:", sSlots2Facials(_slotnum));				\
+	fff("ava :", kSlots2Ava(_slotnum));				\
+	fff("sat :", sSlots2Satmsg(_slotnum));				\
+	fff("not :", sSlots2Notsat(_slotnum));				\
+	fff("seat:", sSlots2Seat(_slotnum))
 
 
 
@@ -101,11 +107,11 @@
 									\
 		if(Onlst(_l, llGetOwner()))				\
 			{						\
-				opf("\towner on list");			\
+				fff("\towner on list");			\
 			}						\
 		else							\
 			{						\
-				opf("\towner NOT on list");		\
+				fff("\towner NOT on list");		\
 			}						\
 	}
 
@@ -116,23 +122,23 @@
 		int $_ = Len(_l) / stride;				\
 		LoopDown($_,						\
 			 DEBUGmsg("---------- stride:", $_, "of", Len(_l) / stride, "----------"); \
-			 opf("pose:", sSlots2Pose($_));			\
-			 opf("pos :", vSlots2Position($_));		\
-			 opf("rot :", rSlots2Rot($_));			\
-			 opf("face:", sSlots2Facials($_));		\
-			 opf("ava :", kSlots2Ava($_));			\
-			 opf("sat :", sSlots2Satmsg($_));		\
-			 opf("not :", sSlots2Notsat($_));		\
-			 opf("seat:", sSlots2Seat($_))			\
+			 fff("pose:", sSlots2Pose($_));			\
+			 fff("pos :", vSlots2Position($_));		\
+			 fff("rot :", rSlots2Rot($_));			\
+			 fff("face:", sSlots2Facials($_));		\
+			 fff("ava :", kSlots2Ava($_));			\
+			 fff("sat :", sSlots2Satmsg($_));		\
+			 fff("not :", sSlots2Notsat($_));		\
+			 fff("seat:", sSlots2Seat($_))			\
 			 );						\
 									\
 		if(Onlst(_l, llGetOwner()))				\
 			{						\
-				opf("\towner on list");			\
+				fff("\towner on list");			\
 			}						\
 		else							\
 			{						\
-				opf("\towner NOT on list");		\
+				fff("\towner NOT on list");		\
 			}						\
 	}
 #endif  // DEBUG_ShowSlots_Sittersonly

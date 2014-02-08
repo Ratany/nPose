@@ -18,24 +18,29 @@ list animsList;  // agent uuid, string1, string2
 
 
 #ifdef DEBUG_Showanimslist
+#ifdef _STD_DEBUG_PUBLIC
+#define fff apf
+#else
+#define fff opf
+#endif
 #define DEBUG_virtualShowAnimslist(_l, ...)				\
 	{								\
 		int $_ = Len(_l) / iSTRIDE_animslist;			\
 		LoopDown($_,						\
 			 DEBUGmsg("---------- stride:", $_, "of", Len(_l) / iSTRIDE_animslist, "----------"); \
 			 DEBUGmsg(__VA_ARGS__, "\n");			\
-			 opf("agent:", kAnimslistToAgent(_l, $_));	\
-			 opf("cmd  :", sAnimslistToCmd(_l, $_));	\
-			 opf("anim :", sAnimslistToAnim(_l, $_))	\
+			 fff("agent:", kAnimslistToAgent(_l, $_));	\
+			 fff("cmd  :", sAnimslistToCmd(_l, $_));	\
+			 fff("anim :", sAnimslistToAnim(_l, $_))	\
 			 );						\
 									\
 		if(Onlst(_l, llGetOwner()))				\
 			{						\
-				opf("\towner on list");			\
+				fff("\towner on list");			\
 			}						\
 		else							\
 			{						\
-				opf("\towner NOT on list");		\
+				fff("\towner NOT on list");		\
 			}						\
 	}
 // 		opf("CSV:", llList2CSV(_l));

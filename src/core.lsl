@@ -20,6 +20,7 @@
 // allowed by the platform.
 
 
+
 #define DEBUG0 0  // card reading
 #define DEBUG1 0  // listener
 #define DEBUG2 0  // assigning slots
@@ -28,6 +29,7 @@
 // #define DEBUG_tellmem  // memory info
 // #define DEBUG_ShowSlots  // show slots and changes
 
+// #define _STD_DEBUG_PUBLIC
 
 #include <lslstddef.h>
 #include <undetermined.h>
@@ -39,6 +41,17 @@
 #include <constants.h>
 #include <core-inline.h>
 #include <sitting.h>
+
+
+
+//
+// set cards can process props, LINKMSG, SATMSG, NOTSATMSG and ANIM lines in a card
+//
+// BTN should only do props and LINKMSG ??
+//
+
+#define lTOKENS_SETCARD            [ANIM, LINKMSG, NOTSATMSG, PROPS, SATMSG, SINGLE]
+#define lTOKENS_BTNCARD            [LINKMSG, PROPS]
 
 
 ProcessLine(string line, key av)
