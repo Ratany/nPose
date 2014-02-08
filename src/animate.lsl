@@ -275,12 +275,12 @@ default
 					 // the slot to the list of unstoppable anims for this agent; then ask
 					 // for perms to animate the agent
 					 //
-					 when(kSlots2Ava(Len(slots) / stride - 1))
+					 when(kSlots2Ava($_slotnum))
 					 {
 						 DEBUGmsg1("perm req after single slot update");
-						 xUnstoppableAdd(lUnstoppable, kSlots2Ava(Len(slots) / stride - 1), sSlots2Pose(Len(slots) / stride - 1));
+						 xUnstoppableAdd(lUnstoppable, kSlots2Ava($_slotnum), sSlots2Pose($_slotnum));
 						 SetStatus(stNO_RECURSE);
-						 llRequestPermissions(kSlots2Ava(Len(slots) / stride - 1), flagPERMS);
+						 llRequestPermissions(kSlots2Ava($_slotnum), flagPERMS);
 					 }
 					 );
 

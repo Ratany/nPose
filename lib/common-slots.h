@@ -165,7 +165,7 @@
 
 
 // Convert a stride of a slots list to a stride of a slots list to get
-// the data types right.  Requires lots of memory ...
+// the data types right.
 //
 #define ySlotsConvertStride(_lsrc, _strideofsrc, _ldest, _strideofdest)	\
 	(_ldest = llListReplaceList(_ldest,				\
@@ -179,7 +179,7 @@
 				     sToSlotsNotsat(_lsrc, _strideofsrc), \
 				     sToSlotsSeat(_lsrc, _strideofsrc)	\
 									], \
-				    _strideofdest, (_strideofdest) + stride - 1))
+				    (_strideofdest) * stride, (_strideofdest) * stride + stride - 1))
 
 // Add stride 0 from a list _lsrc to a list _ldest.  Both lists are
 // slots lists.
@@ -195,6 +195,7 @@
 		    sToSlotsNotsat(_lsrc, 0),				\
 		    sToSlotsSeat(_lsrc, 0)				\
 									])
+
 
 // get a copy of one slot-stride
 //
@@ -314,13 +315,12 @@
 					unless(iIsUndetermined($_slotnum)) \
 						{			\
 							$_slotnum /= stride; \
-							ySlotsStrideDelete(_ldest, $_slotnum); \
-							ySlotsAddStride($_l, _ldest); \
+							ySlotsConvertStride($_l, 0, _ldest, $_slotnum);	\
 							_do;		\
 						}			\
 					else				\
 						{			\
-							ERRORmsg("undetermined slotupdate"); \
+							ERRORmsg("invalid slotupdate"); \
 						}			\
 				}					\
 									\

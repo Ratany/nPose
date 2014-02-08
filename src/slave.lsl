@@ -21,7 +21,7 @@
 
 
 #define DEBUG0 0  // anims, seatupdate
-#define DEBUG1 0  // stopping anims
+#define DEBUG1 0  // asdf
 #define DEBUG2 0  // stopping anims
 #define DEBUG3 0  // doSeats()
 
@@ -98,10 +98,26 @@ integer AvLinkNum(key av)
 
 void doSeats(integer slotNum)
 {
+	int avlinknum;
 	key avKey = kSlots2Ava(slotNum);
-	int avlinknum = AvLinkNum(avKey);
-	when((avlinknum < 0) || (avKey == NULL_KEY))
+	when(avKey)
+	{
+		avlinknum = AvLinkNum(avKey);
+		when(avlinknum < 0)
+			{
+				DEBUGmsg3("invalid link-number w/ slot", slotNum);
+#if DEBUG3
+				virtualinlinePrintSingleSlot(slots, slotNum);
+#endif
+				return;
+			}
+	}
+	else
 		{
+			DEBUGmsg3("slot", slotNum, "not assigned");
+#if DEBUG3
+			virtualinlinePrintSingleSlot(slots, slotNum);
+#endif
 			return;
 		}
 
@@ -267,7 +283,7 @@ default
 		// receive an update for a single slot and doSeats() for that slot,
 		// tell menu to update buttons
 		//
-		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY, doSeats(Len(slots) / stride - 1); llMessageLinked(LINK_SET, iBUTTONUPDATE, "", NULL_KEY));
+		virtualReceiveSlotSingle(str, slots, num, id, kMYKEY, doSeats($_slotnum); llMessageLinked(LINK_SET, iBUTTONUPDATE, "", NULL_KEY));
 
 		if(num == seatupdate)
 			{
