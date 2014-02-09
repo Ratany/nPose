@@ -27,8 +27,8 @@
 
 
 #define DEBUG0 0  // slotupdates
-#define DEBUG1 0  // animations
-#define DEBUG2 0  // mkanimslist()
+#define DEBUG1 1  // animations
+#define DEBUG2 1  // mkanimslist()
 #define DEBUG3 1  // repeated anims
 
 // #define _STD_DEBUG_PUBLIC
@@ -44,7 +44,7 @@
 
 int status = 0;
 #define stSLOTS_RCV                1
-#define stFACE_ANIM_GOT            2
+#define stON_TIMER                 2
 #define stNO_RECURSE               8
 #define stIGNORE_RT_PERMS         16
 #define stDOSYNC                  32
@@ -58,6 +58,12 @@ int status = 0;
 #include <animslist.h>
 
 
+#define fTIMER                     1.0
+
+#define xTimerOff                  llSetTimerEvent(0.0); UnStatus(stON_TIMER)
+#define xTimerOn                   llSetTimerEvent(fTIMER); SetStatus(stON_TIMER)
+
+
 // the last seat that was animated
 // needed to figure out which agent to animate next
 //
@@ -67,17 +73,16 @@ key kMYKEY;
 
 
 list slots;
-list faceTimes;
 
 
 // list of animations not to stop
 //
 // These anims are not stopped when anims are stopped, and they are
-// started.
+// started.  Repeatable anims are repeated.
 //
 // see animslist.h
 //
-// [agent uuid, anim name]
+// [agent uuid, anim name, repeat counter]
 //
 list lUnstoppable;
 
@@ -90,18 +95,66 @@ list lUnstoppable;
 void mkanimlist()
 {
 	//
-	// "time" means to repeat the animation only so often
+	// put potentially repeatable animations on the list of unstoppable anims
 	//
-	// builds the list 'faceTimes'
+	// done with every slot update
 	//
 
-	// just rebuild the whole list --- figuring out what actually changed on
-	// updating a single slot and applying only the change doesn´t seem to
-	// be worthwhile
+	// before putting more anims on the list, remove obsolete entries
 	//
-	faceTimes = [];
+	int $_ = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
+	LoopDown($_,
+		 bool obsolete = FALSE;
 
-	int $_ = Len(slots) / stride;
+		 // an entry is obsolete when it´s for an agent not on the slots list
+		 //
+		 int agentslot = LstIdx(slots, kUnstoppableToAgent(lUnstoppable, $_));
+		 when(iIsUndetermined(agentslot))
+		 {
+			 obsolete = TRUE;
+		 }
+		 else
+			 {
+				 // an entry is obsolete when the agent is in a different slot
+				 //
+				 when(iSlots2SeatNo(agentslot) != iUnstoppableToSeatNo(lUnstoppable, $_))
+					 {
+						 obsolete = TRUE;
+					 }
+				 else
+					 {
+						 // an entry is obsolete when repeatable anims are disabled and it is to be repeated,
+						 // or when the repeat counter is 0
+						 //
+						 int repeat = iUnstoppableToRepeat(lUnstoppable, $_);
+						 if(!repeat || (HasStatus(stFACE_DISABLE) && (iREPEAT_INDEFINITELY == repeat)))
+							 {
+								 obsolete = TRUE;
+							 }
+					 }
+			 }
+
+		 // remove the entry when it´s obsolete
+		 //
+		 when(obsolete)
+			 {
+				 yUnstoppableRM(lUnstoppable, $_);
+			 }
+		 );
+
+
+	// when repeatable anims are disabled, don´t enlist them at all
+	//
+	IfStatus(stFACE_DISABLE)
+	{
+		DEBUGmsg2("repeatables not enabled");
+		return;
+	}
+
+
+	// when repeatable anims are enabled, put them onto the list
+	//
+	$_ = Len(slots) / stride;
 	LoopDown($_,
 		 key agent = kSlots2Ava($_);
 		 if(agent)
@@ -124,10 +177,13 @@ void mkanimlist()
 							  {
 								  if(llList2String(temp, 1))
 									  {
-										  //collect the name of the anim and the time
-										  faces += ([llList2String(temp, 0), llList2Integer(temp, 1)]);
-										  hasNewFaceTime = 1;
-										  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0));  // uses Enlist()
+										  // put anim and repeat counter on list for this agent
+										  // the animation is repeated until the counter is 0
+										  // --- the minimum is 1
+										  //
+										  int repeat = llList2Integer(temp, 1);
+										  repeat = Max(1, repeat);
+										  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0), repeat, kSlots2SeatNo($_));  // uses Enlist()
 									  }
 							  }
 							  else
@@ -136,18 +192,14 @@ void mkanimlist()
 										  {
 											  if(llList2String(temp, 0))
 												  {
-													  faces += ([llList2String(temp, 0), -1]);
-													  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0));  // uses Enlist()
+													  // put anim on list for this agent
+													  // and mark as to be repeated indefinitely
+													  //
+													  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0), iREPEAT_INDEFINITELY, kSlots2SeatNo($_));  // uses Enlist()
 												  }
 										  }
 								  }
 							  );
-
-						 SetStatus(stFACE_ANIM_GOT);
-
-						 //add sitter key and flag if timer defined followed by a stride 2 list containing face anim name and associated time
-						 faceTimes += ([agent, hasNewFaceTime, Len(faceanimsTemp)]) + faces;
-						 DEBUGmsg2("added repeating anim:", llList2CSV(([agent, hasNewFaceTime, Len(faceanimsTemp)]) + faces));
 					 }
 			 }
 		 );
@@ -187,11 +239,14 @@ default
 						//
 						slots = [];
 
-						// stop the timer for the while so it doesn´t mess with anything
-						// and actually _is_ stopped --- not strictly needed here, but
-						// doesn´t hurt
+						// reset ...
 						//
-						llSetTimerEvent(0.0);
+						lUnstoppable = [];
+
+						// stop the timer for the while so it doesn´t mess with anything
+						//
+						xTimerOff;
+
 						SetStatus(stSLOTS_RCV);
 						return;
 					}
@@ -204,12 +259,6 @@ default
 						DEBUGmsg0("rcv slots end");
 
 						UnStatus(stSLOTS_RCV);
-
-
-						// reset ...
-						//
-						UnStatus(stFACE_ANIM_GOT);
-						lUnstoppable = [];
 
 						// reset and rebuild
 						//
@@ -265,7 +314,10 @@ default
 					//
 					when(kSlots2Ava(Len(slots) / stride - 1))
 						{
-							xUnstoppableAdd(lUnstoppable, kSlots2Ava(Len(slots) / stride - 1), sSlots2Pose(Len(slots) / stride - 1));
+							// enlist the animation from the slot --- plays indefinitely
+							// mark as not started yet
+							//
+							xUnstoppableAdd(lUnstoppable, kSlots2Ava(Len(slots) / stride - 1), sSlots2Pose(Len(slots) / stride - 1), iNOT_STARTED_YET, kSlots2SeatNo(Len(slots) / stride - 1));
 						}
 
 					return;
@@ -283,19 +335,6 @@ default
 					 //
 					 mkanimlist();
 
-					 // update the list of unstoppable anims for the agent the
-					 // updated slot is assigned to:  remove all entries for
-					 // agents who don´t have a slot assigned from the list
-					 // of unstoppable anims
-					 //
-					 int $_ = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
-					 LoopDown($_,
-						  if(NotOnlst(slots, kUnstoppableToAgent(lUnstoppable, $_)))
-							  {
-								  yUnstoppableRM(lUnstoppable, $_);
-							  }
-						  );
-
 					 // if the updated slot has an agent assigned, add the animation from
 					 // the slot to the list of unstoppable anims for this agent; then ask
 					 // for perms to animate the agent
@@ -303,7 +342,11 @@ default
 					 when(kSlots2Ava($_slotnum))
 					 {
 						 DEBUGmsg1("perm req after single slot update");
-						 xUnstoppableAdd(lUnstoppable, kSlots2Ava($_slotnum), sSlots2Pose($_slotnum));
+						 // enlist the animation from the slot --- plays indefinitely
+						 // mark as not started yet
+						 //
+						 xUnstoppableAdd(lUnstoppable, kSlots2Ava($_slotnum), sSlots2Pose($_slotnum), iNOT_STARTED_YET, kSlots2SeatNo($_slotnum));
+
 						 SetStatus(stNO_RECURSE);
 						 llRequestPermissions(kSlots2Ava($_slotnum), flagPERMS);
 					 }
@@ -378,7 +421,12 @@ default
 														// It will be started in the perms event.
 														//
 														DEBUGmsg1("start single anim:", tmpANIM);
-														xUnstoppableAdd(lUnstoppable, av, tmpANIM);
+														int $_ = LstIdx(slots, av);
+														unless(iIsUndetermined($_))
+															{
+																$_ /= stride;
+																xUnstoppableAdd(lUnstoppable, av, tmpANIM, iNOT_STARTED_YET, kSlots2SeatNo($_));
+															}
 													}
 												else
 													{
@@ -429,6 +477,24 @@ default
 				bool on = (str == "on");
 				CompStatus(stFACE_DISABLE, !on);
 
+				// this requires a rebuild
+				//
+				mkanimlist();
+				//
+				// and a reset
+				//
+				iLastAnimatedSeat = iUNDETERMINED;
+				//
+				// and a timer start
+				//
+				IfNStatus(stON_TIMER)
+				{
+					xTimerOn;
+				}
+				//
+				// yeah it sucks ...
+				// /
+
 				return;
 			}
 	}  // linked message
@@ -452,24 +518,16 @@ default
 		DEBUGmsg("runtime perms triggered");
 
 		// Stop all anims in inventory that aren´t in the slot
-		// and stoppable, and start the animation in the slot.
+		// and stoppable, and start the unstoppable ones.
 		//
-		inlineAnimsStopAll(agent, lUnstoppable, DEBUGmsg1("started animation", sSlots2Pose(slot)));
-
-		//start timer if we have face anims for any slot
-		//
-		IfStatus(stFACE_ANIM_GOT)
-		{
-			llSetTimerEvent(1.0);
-		}
-		else
-			{
-				llSetTimerEvent(0.0);
-			}
-
+		inlineAnimsStopAll(agent, lUnstoppable);
 
 		IfNStatus(stNO_RECURSE)
 		{
+			// don´t need the timer while the agents are animated from here
+			//
+			xTimerOff;
+
 			// find the next seat to do animations for and recurse
 			//
 			int $_ = Len(slots) / stride;
@@ -481,152 +539,77 @@ default
 						 {
 							 when(iLastAnimatedSeat < iSlots2SeatNo($_))
 								 {
+									 // check if there are anims to start
 									 //
-									 // ADD CHECK IF THERE ARE ANIMS TO PLAY
-									 //
+									 int u = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
+									 LoopDown(u,
+										  int repeat = iUnstoppableToRepeat(lUnstoppable, u);
 
-									 iLastAnimatedSeat = iSlots2SeatNo($_);
-									 DEBUGmsg1("perm req next seat for", nextagent);
-									 llRequestPermissions(nextagent, flagPERMS);
-									 return;
+										  // Note: (iHAS_BEEN_STARTED != repeat) leaves iREPEAT_INDEFINITELY and iNOT_STARTED_YET
+										  // Should more possibilities be added, this expression needs to be changed.
+										  //
+										  when(((iHAS_BEEN_STARTED != repeat) || (0 < repeat)) && (kUnstoppableToAgent(lUnstoppable, u) == nextagent))
+										  {
+											  iLastAnimatedSeat = iSlots2SeatNo($_);
+											  DEBUGmsg1("perm req next seat for", nextagent);
+											  llRequestPermissions(nextagent, flagPERMS);
+											  return;
+										  }
+										  );
 								 }
 						 }
 				 }
 				 );
 		}
 
-		// Either all seats are through, so start over, or the timer has
-		// messed with the order and which seat was animated last is
-		// undetermined.
+		// When all seats are through, flip the timer on to see if there are
+		// repeating anims to play.
 		//
 		DEBUGmsg1("perm req returns");
 		iLastAnimatedSeat = iUNDETERMINED;
+
+		IfNStatus(stON_TIMER)
+		{
+			xTimerOn;
+		}
 	}
 
 	event timer()
-		{
-			IfStatus(stFACE_DISABLE)
+	{
+		DEBUGmsg1("timer here");
+
+		unless(llGetAgentSize(llGetLinkKey(llGetNumberOfPrims())) == ZERO_VECTOR)
 			{
-				llSetTimerEvent(0.0);
-				DEBUGmsg3("faces not enabled");
-				return;
+				int $_ = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
+				LoopDown($_,
+					 int repeat = iUnstoppableToRepeat(lUnstoppable, _$);
+					 unless(repeat)
+					 {
+						 yUnstoppableRM(lUnstoppable, $_);
+					 }
+					 else
+						 {
+							 when(((repeat == iREPEAT_INDEFINITELY) || (repeat > 0)) && (iLastAnimatedSeat < iUnstoppableToSeatNo(lUnstoppable, $_)))
+								 {
+									 DEBUGmsg1("perm req timer");
+									 iLastAnimatedSeat = iUnstoppableToSeatNo(lUnstoppable, $_);
+									 llRequestPermissions(kUnstoppableToAgent(lUnstoppable, $_), flagPERMS);
+
+									 // can´t just "queue up" the requests here, so flop
+									 // back to the perm event
+									 //
+									 // In case the event is never triggered, nothing happens
+									 // and the timer stays on to query the next agent.
+									 //
+									 return;
+								 }
+						 }
+					 );
 			}
 
-			// set this to prevent recursion in the perms event
-			//
-			// The timer is going through all agents anyway.
-			//
-			SetStatus(stNO_RECURSE);
-
-			integer n;
-			integer stop = llGetListLength(slots) / 8;
-			key av;
-			integer facecount;
-			integer faceindex;
-
-
-			for(n = 0; n < stop; ++n)
-				{
-					//doing each seat
-					av = (key)llList2String(slots, n * 8 + 4);
-					faceindex = 0;
-					//locate our stride in faceTimes list
-					integer keyHasFacial = llListFindList(faceTimes, [av]);
-					//get number of face anims for this seat
-					integer newFaceTimeFlag = llList2Integer(faceTimes, keyHasFacial + 1);
-
-					if(newFaceTimeFlag == 0)
-						{
-							list faceanims;
-							//need to know if someone seated in this seat, if not we won't do any facials
-							if(av != "")
-								{
-									faceanims = llParseString2List(llList2String(slots, n * 8 + 3), ["~"], []);
-									facecount = llGetListLength(faceanims);
-
-#if 0
-									if(facecount && sits(thisAV))  //modified cause face anims were being imposed after AV stands.
-										{
-											thisAV = llGetPermissionsKey();
-											llRequestPermissions(av, flagPERMS);
-										}
-#endif
-								}
-
-							integer x;
-
-							for(x = 0; x < facecount; ++x)
-								{
-									if(facecount > 0)
-										{
-											if(faceindex < facecount)
-												{
-													llStartAnimation(llList2String(faceanims, faceindex));
-												}
-
-											faceindex++;
-										}
-								}
-						}
-					else
-						if(av != "")
-							{
-								//need to know if someone seated in this seat, if not we won't do any facials
-								//do our stuff with defined facial times
-								facecount = llList2Integer(faceTimes, keyHasFacial + 2);
-
-#if 0
-								//if we have facial anims make sure we have permissions for this av
-								if((facecount > 0) && sits(thisAV))    //modified cause face anims were being imposed after AV stands.
-									{
-										thisAV = llGetPermissionsKey();
-										llRequestPermissions(av, flagPERMS);
-									}
-#endif
-
-								integer x;
-
-								for(x = 1; x <= facecount; ++x)
-									{
-										//non looping we check if anim has run long enough
-										if(faceindex < facecount)
-											{
-												integer faceStride = keyHasFacial + 1 + (x * 2);
-												string animName = llList2String(faceTimes, faceStride);
-
-												if(llList2Integer(faceTimes, faceStride + 1) > 0)
-													{
-														faceTimes = llListReplaceList(faceTimes, [llList2Integer(faceTimes, faceStride + 1) - 1],
-																	      faceStride + 1, faceStride + 1);
-													}
-
-												if(facecount > 0)
-													{
-														if(llList2Integer(faceTimes, faceStride + 1) > 0)
-															{
-																llStartAnimation(animName);
-															}
-														else
-															if(llList2Integer(faceTimes, faceStride + 1) == -1)
-																{
-																	llStartAnimation(animName);
-																}
-
-														faceindex++;
-													}
-											}
-									}
-
-							}
-				}
-
-			when((llGetNumberOfPrims() < 2) || (llGetAgentSize(llGetLinkKey(llGetNumberOfPrims())) == ZERO_VECTOR))
-				{
-					// nobody sits on object
-
-					llSetTimerEvent(0.0);
-				}
-
-			UnStatus(stNO_RECURSE);
-		}
+		// nobody needs to be animated
+		//
+		xTimerOff;
+		DEBUGmsg1("timer self-off");
+	}
 }
