@@ -2,56 +2,10 @@
 #ifndef _ANIMSLIST
 #define _ANIMSLIST
 
-#define iSTRIDE_animslist          3
-list animsList;  // agent uuid, string1, string2
 
-
-#define IDX_animslist_agent        0
-#define IDX_animslist_string1      1
-#define IDX_animslist_string2      2
-
-
-#define kAnimslistToAgent(_l, _idx)     llList2Key(_l, (_idx) * (iSTRIDE_animslist) + (IDX_animslist_agent))
-#define sAnimslistToCmd(_l, _idx)       llList2String(_l, (_idx) * (iSTRIDE_animslist) + (IDX_animslist_string1))
-#define sAnimslistToAnim(_l, _idx)      llList2String(_l, (_idx) * (iSTRIDE_animslist) + (IDX_animslist_string2))
-#define yAnimslistDeleteEntry(_l, _idx) (_l = llDeleteSubList(_l, (_idx) * (iSTRIDE_animslist), (_idx) * (iSTRIDE_animslist) + 2))
-
-
-#ifdef DEBUG_Showanimslist
-#ifdef _STD_DEBUG_PUBLIC
-#define fff apf
-#else
-#define fff opf
-#endif
-#define DEBUG_virtualShowAnimslist(_l, ...)				\
-	{								\
-		int $_ = Len(_l) / iSTRIDE_animslist;			\
-		LoopDown($_,						\
-			 DEBUGmsg("---------- stride:", $_, "of", Len(_l) / iSTRIDE_animslist, "----------"); \
-			 DEBUGmsg(__VA_ARGS__, "\n");			\
-			 fff("agent:", kAnimslistToAgent(_l, $_));	\
-			 fff("cmd  :", sAnimslistToCmd(_l, $_));	\
-			 fff("anim :", sAnimslistToAnim(_l, $_))	\
-			 );						\
-									\
-		if(Onlst(_l, llGetOwner()))				\
-			{						\
-				fff("\towner on list");			\
-			}						\
-		else							\
-			{						\
-				fff("\towner NOT on list");		\
-			}						\
-	}
-// 		opf("CSV:", llList2CSV(_l));
-#else
-#define DEBUG_virtualShowAnimslist(...)
-#endif
-
-
-// list of agent, animation
-// holds animations not to stop from playing
+// list of [agent uuid, anim name, repeat counter]
 //
+
 #define iSTRIDE_lUnstoppable                                4
 
 #define iIDX_lUnstoppable_Agent                             0
@@ -66,8 +20,12 @@ list animsList;  // agent uuid, string1, string2
 #define iUnstoppableToSeatNo(_lunstoppable, _stride)        llList2Integer(_lunstoppable, _stride * iSTRIDE_lUnstoppable + iIDX_lUnstoppable_SeatNo)
 
 
+// #define xUnstoppableAdd(_lunstoppable, _agent, _anim, _repeat, _seatno) \
+// 	Enlist(_lunstoppable, _agent, _anim, _repeat, _seatno)
+
 #define xUnstoppableAdd(_lunstoppable, _agent, _anim, _repeat, _seatno)	\
-	Enlist(_lunstoppable, _agent, _anim, _repeat, _seatno)
+	(_lunstoppable += [_agent, _anim, _repeat, _seatno])
+
 
 #define yUnstoppableRM(_lunstoppable, _stride)				\
 	(_lunstoppable = llDeleteSubList(_lunstoppable, _stride * iSTRIDE_lUnstoppable, _stride * iSTRIDE_lUnstoppable + iSTRIDE_lUnstoppable - 1))
@@ -85,13 +43,12 @@ list animsList;  // agent uuid, string1, string2
 #define iNOT_STARTED_YET           -3
 
 
-// inlineAnimsStopAll(_foragent, _lunstoppable)
+// inlineAnimate(_foragent, _lunstoppable)
 //
-// stop all animations for agent which are in inventory and not
-// in the list of unstoppable animations for that agent
+// stop all animations for agent as required
 //
-#define inlineAnimsStopAll(_foragent, _lunstoppable)			\
-	DEBUGmsg1("---------- stopAll ----------");			\
+#define inlineAnimate(_foragent, _lunstoppable)				\
+	DEBUGmsg1("---------- animate ----------");			\
 	int slot = LstIdx(slots, _foragent) / stride;			\
 	unless(iIsUndetermined(slot))					\
 	{								\
@@ -155,6 +112,32 @@ list animsList;  // agent uuid, string1, string2
 		}							\
 	DEBUGmsg1("anims playing:", llList2CSV(llGetAnimationList(_foragent)))
 
+
+// stop all animations for agent as required
+//
+#define inlineAnimsStopAll(_foragent)					\
+	DEBUGmsg1("---------- stopAll ----------");			\
+	int slot = LstIdx(slots, _foragent) / stride;			\
+	unless(iIsUndetermined(slot))					\
+	{								\
+		$_ = llGetInventoryNumber(INVENTORY_ANIMATION);		\
+									\
+		string anim = sSlots2Pose(slot);			\
+		LoopDown($_,						\
+			 string iname = llGetInventoryName(INVENTORY_ANIMATION, $_); \
+			 DEBUGmsg1("\t\tinventory:", llGetInventoryKey(iname), iname); \
+			 when(anim != iname)				\
+			 {						\
+				 llStopAnimation(iname);		\
+				 DEBUGmsg1("stopping animation:", iname); \
+			 }						\
+			 );						\
+	}								\
+	else								\
+		{							\
+			ERRORmsg("agent has no slot");			\
+		}							\
+	DEBUGmsg1("anims playing:", llList2CSV(llGetAnimationList(_foragent)))
 
 
 #endif  // _ANIMSLIST

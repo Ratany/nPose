@@ -66,7 +66,7 @@
 // look as if something like -funroll-loops was enabled when
 // virtualsprintf_float() is not outlined ;)
 //
-#define USE_NiceMemstat
+// #define USE_NiceMemstat
 
 // define OUTLINE_virtualsprintf_float to make virtualsprintf_float()
 // a function
@@ -192,7 +192,7 @@ string sprintf_float(float _n, int $_fmt)
 
 #else
 
-#define MemTell                    llSay(PUBLIC_CHANNEL, concat(llGetScriptName(), concat(" ", concat((string)llGetFreeMemory(), " bytes free"))))
+#define MemTell                    apf("\n", llGetScriptName(), "\n", llGetFreeMemory(), "free\n", llGetUsedMemory(), "used\n", llGetMemoryLimit() - llGetFreeMemory() - llGetUsedMemory(), "gc");
 
 #endif  // USE_NiceMemstat
 
