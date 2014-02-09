@@ -42,8 +42,6 @@
 
 #include <constants.h>
 
-#include <sitting.h>
-
 
 int status = 0;
 #define stDOSYNC                   1

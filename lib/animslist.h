@@ -109,18 +109,23 @@ list animsList;  // agent uuid, string1, string2
 				 else					\
 					 {				\
 						 notstop += sUnstoppableToAnim(_lunstoppable, $_); \
-						 unless(iNOT_STARTED_YET == _repeat) \
+						 when(iNOT_STARTED_YET == _repeat) \
 							 {		\
 								 llStartAnimation(sUnstoppableToAnim(_lunstoppable, $_)); \
-								 DEBUGmsg1("started anim:", sUnstoppableToAnim(_lunstoppable, $_)); \
+								 DEBUGmsg1("anim wasn´t started yet:", sUnstoppableToAnim(_lunstoppable, $_)); \
 								 yUnstoppableChgRepeat(_lunstoppable, _$, iHAS_BEEN_STARTED); \
 							 }		\
 						 else			\
 							 {		\
-								 unless(iREPEAT_INDEFINITELY == _repeat) \
+								 when((iREPEAT_INDEFINITELY != _repeat) && (iHAS_BEEN_STARTED != _repeat)) \
 									 { \
 										 --_repeat; \
 										 yUnstoppableChgRepeat(_lunstoppable, _$, _repeat); \
+									 } \
+								 unless(iHAS_BEEN_STARTED == _repeat) \
+									 { \
+										 llStartAnimation(sUnstoppableToAnim(_lunstoppable, $_)); \
+										 DEBUGmsg3("repeating anim:", sUnstoppableToAnim(_lunstoppable, $_)); \
 									 } \
 							 }		\
 					 }				\

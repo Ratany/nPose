@@ -21,11 +21,11 @@
 
 
 //
-// This file defines the function sit(), used by both core and slave.
+// This file defines the function sit(), used by animate.lsl.
 //
 
 
-// this isn´t exactly the right place for boolIsAgent()
+// used only here
 //
 #define boolIsAgent(_k)            (ZERO_VECTOR != llGetAgentSize(_k))
 
@@ -46,7 +46,7 @@
 	}
 
 
-#ifndef _CORE
+#ifdef OUTLINE_sits
 
 bool sits(key k)
 {

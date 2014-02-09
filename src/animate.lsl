@@ -27,9 +27,9 @@
 
 
 #define DEBUG0 0  // slotupdates
-#define DEBUG1 1  // animations
-#define DEBUG2 1  // mkanimslist()
-#define DEBUG3 1  // repeated anims
+#define DEBUG1 0  // animations
+#define DEBUG2 0  // mkanimslist()
+#define DEBUG3 0  // repetitions
 
 // #define _STD_DEBUG_PUBLIC
 
@@ -41,6 +41,8 @@
 #include <common-slots.h>
 #include <constants.h>
 
+#define OUTLINE_sits
+#include <sitting.h>
 
 int status = 0;
 #define stSLOTS_RCV                1
@@ -275,26 +277,11 @@ default
 						//
 						// requesting perms from a prim yields a script error ...
 						//
-						key agent = llGetLinkKey(llGetNumberOfPrims());
-						when(AgentIsHere(agent))  // no point in animating when nobody is here ...
-							{
-								int $_ = LstIdx(slots, agent);
-								unless(iIsUndetermined($_))  // ... or when the last sitter doesn´t have a slot
-									{
-										DEBUGmsg1("perm req after full slot update");
-										llRequestPermissions(agent, flagPERMS);
-										return;
-									}
-							}
-						//
-						// Note: When the last sitter doesn´t have a slot, the core will unsit
-						// them and send a slot update.  Unfortunately, this doesn´t mean that
-						// anyone will be animated.  Hence:
-						//
 						int $_ = Len(slots) / stride;
-						LoopDown($_, agent = kSlots2Ava($_); if(agent) { llRequestPermissions(agent, flagPERMS); return; });
+						LoopDown($_, key agent = kSlots2Ava($_); if(agent) { if(sits(agent)) { llRequestPermissions(agent, flagPERMS); return; } });
+
+						// if there is nobody here, then do nothing
 						//
-						// ... and if there really is nobody there, there do nothing:
 						return;
 					}
 
@@ -317,7 +304,8 @@ default
 							// enlist the animation from the slot --- plays indefinitely
 							// mark as not started yet
 							//
-							xUnstoppableAdd(lUnstoppable, kSlots2Ava(Len(slots) / stride - 1), sSlots2Pose(Len(slots) / stride - 1), iNOT_STARTED_YET, iSlots2SeatNo(Len(slots) / stride - 1));
+							int slotno = Len(slots) / stride - 1;
+							xUnstoppableAdd(lUnstoppable, kSlots2Ava(slotno), sSlots2Pose(slotno), iNOT_STARTED_YET, iSlots2SeatNo(slotno));
 						}
 
 					return;
@@ -347,8 +335,11 @@ default
 						 //
 						 xUnstoppableAdd(lUnstoppable, kSlots2Ava($_slotnum), sSlots2Pose($_slotnum), iNOT_STARTED_YET, iSlots2SeatNo($_slotnum));
 
-						 SetStatus(stNO_RECURSE);
-						 llRequestPermissions(kSlots2Ava($_slotnum), flagPERMS);
+						 if(sits(kSlots2Ava($_slotnum)))
+							 {
+								 SetStatus(stNO_RECURSE);
+								 llRequestPermissions(kSlots2Ava($_slotnum), flagPERMS);
+							 }
 					 }
 					 );
 
@@ -441,28 +432,24 @@ default
 						// Processing the animation change(s) has completed.  Now trigger the
 						// perms event to apply the changes.
 						//
-						DEBUGmsg1("request perms to apply animation changes");
-						SetStatus(stNO_RECURSE);
-						llRequestPermissions(av, flagPERMS);
+						if(sits(av))
+							{
+								DEBUGmsg1("request perms to apply animation changes");
+
+								SetStatus(stNO_RECURSE);
+								llRequestPermissions(av, flagPERMS);
+							}
 					}
 				return;
 			}  // num == LayerPose
 
 		if(num == SYNC)
 			{
+				//
+				// sync is supposed to restart all animations to get them in sync
+				//
+				
 				ERRORmsg("method not yet implemented");
-#if 0
-				SetStatus(stDOSYNC);
-				integer $_ = llGetListLength(slots) / 8;
-				LoopDown($_, key agent = kSlots2Ava($_); if(agent) { DEBUGmsg1("perm req sync"); llRequestPermissions(agent, flagPERMS); });
-
-				// after syncing is completed, unset the status
-				//
-				// Executing more code when explicitly syncing seems to be the only
-				// purpose for this status.
-				//
-				UnStatus(stDOSYNC);
-#endif
 
 				return;
 			}
@@ -515,7 +502,7 @@ default
 				return;
 			}
 
-		DEBUGmsg("runtime perms triggered");
+		DEBUGmsg3("runtime perms triggered");
 
 		// Stop all anims in inventory that aren´t in the slot
 		// and stoppable, and start the unstoppable ones.
@@ -537,25 +524,28 @@ default
 				 {
 					 when(nextagent != agent)
 						 {
-							 when(iLastAnimatedSeat < iSlots2SeatNo($_))
+							 when(sits(nextagent))
 								 {
-									 // check if there are anims to start
-									 //
-									 int u = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
-									 LoopDown(u,
-										  int repeat = iUnstoppableToRepeat(lUnstoppable, u);
+									 when(iLastAnimatedSeat < iSlots2SeatNo($_))
+										 {
+											 // check if there are anims to start
+											 //
+											 int u = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
+											 LoopDown(u,
+												  int repeat = iUnstoppableToRepeat(lUnstoppable, u);
 
-										  // Note: (iHAS_BEEN_STARTED != repeat) leaves iREPEAT_INDEFINITELY and iNOT_STARTED_YET
-										  // Should more possibilities be added, this expression needs to be changed.
-										  //
-										  when(((iHAS_BEEN_STARTED != repeat) || (0 < repeat)) && (kUnstoppableToAgent(lUnstoppable, u) == nextagent))
-										  {
-											  iLastAnimatedSeat = iSlots2SeatNo($_);
-											  DEBUGmsg1("perm req next seat for", nextagent);
-											  llRequestPermissions(nextagent, flagPERMS);
-											  return;
-										  }
-										  );
+												  // Note: (iHAS_BEEN_STARTED != repeat) leaves iREPEAT_INDEFINITELY and iNOT_STARTED_YET
+												  // Should more possibilities be added, this expression needs to be changed.
+												  //
+												  when(((iHAS_BEEN_STARTED != repeat) || (0 < repeat)) && (kUnstoppableToAgent(lUnstoppable, u) == nextagent))
+												  {
+													  iLastAnimatedSeat = iSlots2SeatNo($_);
+													  DEBUGmsg1("perm req next seat for", nextagent);
+													  llRequestPermissions(nextagent, flagPERMS);
+													  return;
+												  }
+												  );
+										 }
 								 }
 						 }
 				 }
@@ -576,14 +566,14 @@ default
 
 	event timer()
 	{
-		DEBUGmsg1("timer here");
+		DEBUGmsg3("timer here");
 
 		unless(llGetAgentSize(llGetLinkKey(llGetNumberOfPrims())) == ZERO_VECTOR)
 			{
 				int $_ = Len(lUnstoppable) / iSTRIDE_lUnstoppable;
 				LoopDown($_,
 					 int repeat = iUnstoppableToRepeat(lUnstoppable, _$);
-					 unless(repeat)
+					 when(!repeat || !sits(kUnstoppableToAgent(lUnstoppable, $_)))
 					 {
 						 yUnstoppableRM(lUnstoppable, $_);
 					 }
@@ -610,6 +600,6 @@ default
 		// nobody needs to be animated
 		//
 		xTimerOff;
-		DEBUGmsg1("timer self-off");
+		DEBUGmsg3("timer self-off");
 	}
 }
