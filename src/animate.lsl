@@ -183,7 +183,7 @@ void mkanimlist()
 										  //
 										  int repeat = llList2Integer(temp, 1);
 										  repeat = Max(1, repeat);
-										  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0), repeat, kSlots2SeatNo($_));  // uses Enlist()
+										  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0), repeat, iSlots2SeatNo($_));  // uses Enlist()
 									  }
 							  }
 							  else
@@ -195,7 +195,7 @@ void mkanimlist()
 													  // put anim on list for this agent
 													  // and mark as to be repeated indefinitely
 													  //
-													  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0), iREPEAT_INDEFINITELY, kSlots2SeatNo($_));  // uses Enlist()
+													  xUnstoppableAdd(lUnstoppable, agent, llList2String(temp, 0), iREPEAT_INDEFINITELY, iSlots2SeatNo($_));  // uses Enlist()
 												  }
 										  }
 								  }
@@ -217,7 +217,7 @@ default
 		afootell(concat(concat(llGetScriptName(), " "), VERSION));
 
 		iLastAnimatedSeat = iUNDETERMINED;
-		lUnstoppable = faceTimes = [];
+		lUnstoppable = [];
 		kMYKEY = llGenerateKey();
 	}
 
@@ -317,7 +317,7 @@ default
 							// enlist the animation from the slot --- plays indefinitely
 							// mark as not started yet
 							//
-							xUnstoppableAdd(lUnstoppable, kSlots2Ava(Len(slots) / stride - 1), sSlots2Pose(Len(slots) / stride - 1), iNOT_STARTED_YET, kSlots2SeatNo(Len(slots) / stride - 1));
+							xUnstoppableAdd(lUnstoppable, kSlots2Ava(Len(slots) / stride - 1), sSlots2Pose(Len(slots) / stride - 1), iNOT_STARTED_YET, iSlots2SeatNo(Len(slots) / stride - 1));
 						}
 
 					return;
@@ -345,7 +345,7 @@ default
 						 // enlist the animation from the slot --- plays indefinitely
 						 // mark as not started yet
 						 //
-						 xUnstoppableAdd(lUnstoppable, kSlots2Ava($_slotnum), sSlots2Pose($_slotnum), iNOT_STARTED_YET, kSlots2SeatNo($_slotnum));
+						 xUnstoppableAdd(lUnstoppable, kSlots2Ava($_slotnum), sSlots2Pose($_slotnum), iNOT_STARTED_YET, iSlots2SeatNo($_slotnum));
 
 						 SetStatus(stNO_RECURSE);
 						 llRequestPermissions(kSlots2Ava($_slotnum), flagPERMS);
@@ -425,7 +425,7 @@ default
 														unless(iIsUndetermined($_))
 															{
 																$_ /= stride;
-																xUnstoppableAdd(lUnstoppable, av, tmpANIM, iNOT_STARTED_YET, kSlots2SeatNo($_));
+																xUnstoppableAdd(lUnstoppable, av, tmpANIM, iNOT_STARTED_YET, iSlots2SeatNo($_));
 															}
 													}
 												else

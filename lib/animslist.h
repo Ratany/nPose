@@ -103,7 +103,7 @@ list animsList;  // agent uuid, string1, string2
 				 int _repeat = iUnstoppableToRepeat(_lunstoppable, _$); \
 				 unless(_repeat)			\
 				 {					\
-					 llStopAnimation(sUnstoppableToAnim(_lunstoppable, $_))	\
+					 llStopAnimation(sUnstoppableToAnim(_lunstoppable, $_)); \
 					 yUnstoppableRM(_lunstoppable, $_); \
 				 }					\
 				 else					\
