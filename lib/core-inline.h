@@ -81,18 +81,20 @@ integer FindEmptySlot()
 
 
 #define ReadCard()							\
-		lastStrideCount = slotMax;				\
-		slotMax = 0;						\
-		llRegionSay(chatchannel, "die");			\
-		llRegionSay(chatchannel, "adjuster_die");		\
-		line = 0;						\
+	lastStrideCount = slotMax;					\
+	slotMax = 0;							\
+	lRezzing = [];							\
+	llRegionSay(chatchannel, "die");				\
+	llRegionSay(chatchannel, "adjuster_die");			\
+	line = 0;							\
 									\
-		if(llGetInventoryKey(card))				\
-			{						\
-				DEBUGmsg0("attempting to read card: '", card, "'", "uuid:", llGetInventoryKey(card), "line:", line); \
+	if(llGetInventoryKey(card))					\
+		{							\
+			DEBUGmsg0("attempting to read card: '", card, "'", "uuid:", llGetInventoryKey(card), "line:", line); \
 									\
-				dataid = llGetNotecardLine(card, line);	\
-			}
+			SetStatus(stREAD_SET_ONGOING);			\
+			dataid = llGetNotecardLine(card, line);		\
+		}
 
 
 

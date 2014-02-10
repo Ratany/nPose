@@ -50,50 +50,102 @@
 // BTN should only do props and LINKMSG ??
 //
 
+ProcessLine(string sline, key av)
+{
+	// ignore comments and whitespace
+	//
+	sline = llStringTrim(sline, STRING_TRIM);
+	if(("" == sline) || (Begstr(sline, 0) == "#"))
+		{
+			return;
+		}
+
+	list params = llParseString2List(sline, ["|"], []);
+	int plen = Len(params);
+	unless(plen)
+	{
+		return;
+	}
+
+	// make the token case insensitive
+	//
+	string action = llToUpper(llList2String(params, 0));
+
+
+#define ANIM                       "ANIM"
+#define LINKMSG                    "LINKMSG"
+#define NOTSATMSG                  "NOTSATMSG"
+#define PROPS                      "PROPS"
+#define SATMSG                     "SATMSG"
+#define SINGLE                     "SINGLE"
+
 #define lTOKENS_SETCARD            [ANIM, LINKMSG, NOTSATMSG, PROPS, SATMSG, SINGLE]
 #define lTOKENS_BTNCARD            [LINKMSG, PROPS]
 
 
-ProcessLine(string line, key av)
-{
-	line = llStringTrim(line, STRING_TRIM);
-	list params = llParseString2List(line, ["|"], []);
-	string action = llList2String(params, 0);
+	string thiscard = card;
+	int thisline = line;
 
-	// slots:  animationName, position vector, rotation vector, facial anim name, seated AV key, SATMSG, NOTSATMSG, Seat#
-	// params: ANIM          | meditation     | <-0.3,0,0.8>    | <0,0,0>        | facial (optional)
-	//           0              1               2              3        4
+	IfStatus(stREAD_BTN)
+	{
+		unless(Onlst(lTOKENS_BTNCARD, action))
+			{
+				ERRORmsg("invalid token", action, "in", btncard, ":", btnline);
+				return;
+			}
 
-	if("ANIM" == action)
+		UnStatus(stREAD_BTN);
+
+		thiscard = btncard;
+		thisline = btnline;
+	}
+
+	IfStatus(stREAD_SET)
+	{
+		unless(Onlst(lTOKENS_SETCARD, action))
+			{
+				ERRORmsg("invalid token", action, "in", card, ":", line);
+				return;
+			}
+
+		UnStatus(stREAD_SET);
+	}
+
+
+#undef lTOKENS_BTNCARD
+#undef lTOKENS_SETCARD
+
+
+	if(ANIM == action)
 		{
+			when(5 < plen)
+				{
+					ERRORmsg("syntax in", thiscard, ":", thisline);
+					return;
+				}
+			when(6 < plen)
+				{
+					ERRORmsg("obsolete arguments in", thiscard, ":", thisline);
+				}
+
+			string sp4 = "";
+			when(5 == plen)
+				{
+					sp4 = llList2String(params, 4);
+				}
+
 			if(slotMax < lastStrideCount)
 				{
-					list $_ = ySlotsStridecopy(slots, slotMax);
-					/*
-					$_ = llListReplaceList($_,
-							       llList2List(params, 1, 2)
-							       + [Vec2Rot(ForceList2Vector(params, 3))]
-							       + llList2List(params, 4, 4)
-							       + [kSlots2Ava(slotMax),
-								  "",
-								  "",
-								  "seat" + (string)(slotMax + 1)],
-							       0, stride - 1);
-					*/
-					$_ = llListReplaceList($_, [llList2String(params, 1), ForceList2Vector(params, 2),
-								    Vec2Rot(ForceList2Vector(params, 3)), llList2Key(params, 4), kSlots2Ava(slotMax),
-							       "", "", "seat" + (string)(slotMax + 1)], 0, stride - 1);
-
-
-					ySlotsStrideDelete(slots, slotMax);
-					ySlotsAddStride($_, slots);
+					slots = llListReplaceList(slots, [llList2String(params, 1), ForceList2Vector(params, 2),
+									  Vec2Rot(ForceList2Vector(params, 3)), sp4, kSlots2Ava(slotMax),
+									  "", "", "seat" + (string)(slotMax + 1)], slotMax * stride, slotMax * stride + stride - 1);
 
 					DEBUGmsg2("slots replace, params:", llList2CSV(params));
 				}
 			else
 				{
 					slots += [llList2String(params, 1), ForceList2Vector(params, 2),
-						  Vec2Rot(ForceList2Vector(params, 3)), llList2Key(params, 4), "", "", "", "seat" + (string)(slotMax + 1)];
+						  Vec2Rot(ForceList2Vector(params, 3)), sp4, "", "", "", "seat" + (string)(slotMax + 1)];
 
 					DEBUGmsg2("slots add, params    :", llList2CSV(params));
 				}
@@ -107,21 +159,38 @@ ProcessLine(string line, key av)
 			return;
 		}
 
-	if("SINGLE" == action)
+	if(SINGLE == action)
 		{
+			when((4 != plen) || (5 != plen))
+				{
+					ERRORmsg("syntax in", thiscard, ":", thisline);
+					return;
+				}
+
+			string sp4 = "";
+			when(5 == plen)
+				{
+					sp4 = llList2String(params, 4);
+				}
+
 			//this pose is for a single sitter within the slots list
 			//got to find out which slot and then replace the entire slot
 
+			//
+			// I have no idea what that means.  What is replaced with what?
+			//
+
 			integer posIndex = LstIdx(slots, ForceList2Vector(params, 2));
 
-			if((posIndex == -1) || ((posIndex != -1) && llList2String(slots, posIndex - 1) != llList2String(params, 1)))
+			when(iIsUndetermined(posIndex))
+				{
+					ERRORmsg("cannot use token", action, "in", thiscard, ":", thisline);
+					return;
+				}
+
+			when(llList2String(slots, posIndex - 1) != llList2String(params, 1))
 				{
 					integer slotindex = llListFindList(slots, [clicker]) - 4;
-					slots = llListReplaceList(slots, [llList2String(params, 1), ForceList2Vector(params, 2),
-									  Vec2Rot(ForceList2Vector(params, 3)), llList2String(params, 4),
-									  llList2Key(slots,
-										     slotindex + 4), "", "", llList2String(slots, slotindex + 7)], slotindex, slotindex + 7);
-
 
 					// replacing up to slotindex + 7 means that at least ((slotindex + 7 +
 					// stride - 7) / stride) slots must be considered
@@ -129,11 +198,20 @@ ProcessLine(string line, key av)
 					int newmax = (slotindex + 7 + stride - 7) / stride;
 					when(newmax > slotMax)
 						{
-							ERRORmsg("slot gap:", newmax - slotMax, "slots");
-
-							slotMax = newmax;
-							lastStrideCount = slotMax;
+							ERRORmsg("slot gap:", newmax - slotMax, "slots; cannot use token", action, "in", thiscard, ":", thisline);
+							return;
 						}
+
+					slots = llListReplaceList(slots, [llList2String(params, 1), ForceList2Vector(params, 2),
+									  Vec2Rot(ForceList2Vector(params, 3)), sp4,
+									  llList2Key(slots,
+										     slotindex + 4), "", "", llList2String(slots, slotindex + 7)], slotindex, slotindex + 7);
+
+
+				}
+			else
+				{
+					ERRORmsg("token", action, "in", thiscard, ":", thisline, " w/'", llList2String(slots, posIndex - 1), "' and '", llList2String(params, 1), "' is void");
 				}
 
 			DEBUG_TellMemory("SINGLE");
@@ -141,11 +219,17 @@ ProcessLine(string line, key av)
 			return;
 		}
 
-	if("PROP" == action)
+	if(PROPS == action)
 		{
-			string obj = llList2String(params, 1);
+			when(3 < plen)
+				{
+					ERRORmsg("syntax in", thiscard, ":", thisline);
+					return;
+				}
 
-			if(llGetInventoryType(obj) == INVENTORY_OBJECT)
+			string propname = llList2String(params, 1);
+
+			if(llGetInventoryType(propname) == INVENTORY_OBJECT)
 				{
 					list strParm2 = llParseString2List(llList2String(params, 2), ["="], []);
 
@@ -155,25 +239,29 @@ ProcessLine(string line, key av)
 						}
 					else
 						{
-							bool expl = (llList2String(params, 4) == "explicit");
-							CompStatus(stEXPLICIT, expl);
-
-							vector vDelta = ForceList2Vector(params, 2);
-							vector pos = llGetPos() + (vDelta * llGetRot());
-							rotation rot = Vec2Rot(ForceList2Vector(params, 3)) * llGetRot();
-
-							if(llVecMag(vDelta) > 9.9)
+							when(plen == 5)
 								{
-									//too far to rez it direct.  need to do a prop move
-									llRezAtRoot(obj, llGetPos(), ZERO_VECTOR, rot, chatchannel);
-									llSleep(1.0);
-									llRegionSay(chatchannel, llDumpList2String(["MOVEPROP", obj, (string)pos], "|"));
+									bool expl = (llList2String(params, 4) == "explicit");
+									CompStatus(stEXPLICIT, expl);
 								}
 							else
 								{
-									llRezAtRoot(obj, llGetPos() + (ForceList2Vector(params, 2) * llGetRot()), ZERO_VECTOR, rot, chatchannel);
+									UnStatus(stEXPLICIT);
 								}
+
+							// this needs to be fixed when doSeats() is fixed
+							//
+							vector pos = llGetPos() + ForceList2Vector(params, 2) * llGetRot();
+							rotation rot = Vec2Rot(ForceList2Vector(params, 3)) * llGetRot();
+							// /
+
+							yRezzingAdd(propname, pos);
+							llRezAtRoot(propname, llGetPos(), ZERO_VECTOR, rot, chatchannel);
 						}
+				}
+			else
+				{
+						ERRORmsg(propname, "missing in", thiscard, ":", thisline);
 				}
 
 			DEBUG_TellMemory("PROP");
@@ -181,11 +269,22 @@ ProcessLine(string line, key av)
 			return;
 		}
 
-	if("LINKMSG" == action)
+	if(LINKMSG == action)
 		{
+			when(4 < plen)
+				{
+					ERRORmsg("syntax in", thiscard, ":", thisline);
+					return;
+				}
+
 			integer num = llList2Integer(params, 1);
-			string line1 = str_replace(line, "%AVKEY%", av);
+			string line1 = str_replace(sline, "%AVKEY%", av);
 			list params1 = llParseString2List(line1, ["|"], []);
+			if(4 < Len(params1))
+				{
+					ERRORmsg("syntax in", thiscard, ":", thisline);
+					return;
+				}
 			key lmid = llList2Key(params1, 3);
 
 			when(lmid == "")
@@ -198,7 +297,7 @@ ProcessLine(string line, key av)
 
 			// why sleep here?
 			//
-			llSleep(1.0);
+			// llSleep(1.0);
 			llRegionSay(chatchannel, llDumpList2String(["LINKMSGQUE", num, str, lmid], "|"));
 
 			DEBUG_TellMemory("LINKMSG");
@@ -206,25 +305,50 @@ ProcessLine(string line, key av)
 			return;
 		}
 
-	if("SATMSG" == action)
+	if(SATMSG == action)
 		{
-			integer index = (slotMax - 1) * stride + 5;
-			slots = llListReplaceList(slots, [llDumpList2String([llList2String(slots, index),
-									     llDumpList2String(llDeleteSubList(params, 0, 0), "|")], "§")], index, index);
-			DEBUG_TellMemory("SATMSG");
+			if(slotMax > 0)
+				{
+					integer index = (slotMax - 1) * stride + 5;
+					slots = llListReplaceList(slots, [llDumpList2String([llList2String(slots, index),
+											     llDumpList2String(llDeleteSubList(params, 0, 0), "|")], "§")], index, index);
+				}
+			else
+				{
+					ERRORmsg("cannot use token", action, "in", thiscard, ":", thisline);
+				}
 
+			DEBUG_TellMemory("SATMSG");
 			return;
 		}
 
-	if("NOTSATMSG" == action)
+	if(NOTSATMSG == action)
 		{
-			integer index = (slotMax - 1) * stride + 6;
-			slots = llListReplaceList(slots, [llDumpList2String([llList2String(slots, index),
-									     llDumpList2String(llDeleteSubList(params, 0, 0), "|")], "§")], index, index);
+			if(slotMax > 0)
+				{
+					integer index = (slotMax - 1) * stride + 6;
+					slots = llListReplaceList(slots, [llDumpList2String([llList2String(slots, index),
+											     llDumpList2String(llDeleteSubList(params, 0, 0), "|")], "§")], index, index);
+				}
+			else
+				{
+					ERRORmsg("cannot use token", action, "in", thiscard, ":", thisline);
+				}
 
 			DEBUG_TellMemory("NOTSATMSG");
 		}
+
+	
+#undef ANIM
+#undef LINKMSG
+#undef NOTSATMSG
+#undef PROPS
+#undef SATMSG
+#undef SINGLE
+
+
 }
+
 
 default
 {
@@ -306,19 +430,36 @@ default
 			{
 				DEBUGmsg0("--> Lmsg DOPOSE:", "sender:", sender, "num:", num, "str:", str, "id:", id);
 
-				card = str;
-				clicker = id;
-				ReadCard();
+				IfNStatus(stREAD_SET_ONGOING)
+				{
+					card = str;
+					clicker = id;
+					llSetTimerEvent(fTIMER_TIMEOUT_DS);
+					ReadCard();
+				}
+				else
+					{
+						ERRORmsg("reading", card, "ongoing");
+					}
 
 				return;
 			}
 
 		if(num == DOACTIONS)
 			{
-				btncard = str;
-				clicker = id;
-				btnline = 0;
-				btnid = llGetNotecardLine(btncard, btnline);
+				IfStatus(stREAD_BTN_ONGOING)
+				{
+					ERRORmsg("reading", btncard, "ongoing");
+				}
+				else
+					{
+						btncard = str;
+						clicker = id;
+						btnline = 0;
+						SetStatus(stREAD_BTN_ONGOING);
+						llSetTimerEvent(fTIMER_TIMEOUT_DS);
+						btnid = llGetNotecardLine(btncard, btnline);
+					}
 
 				return;
 			}
@@ -479,6 +620,7 @@ default
 			{
 				if(llGetInventoryType(adminHudName) != INVENTORY_NONE)
 					{
+						yRezzingAdd(adminHudName, llGetPos() + (<0, 0, 1>));
 						llRezObject(adminHudName, llGetPos() + <0, 0, 1>, ZERO_VECTOR, llGetRot(), chatchannel);
 					}
 
@@ -495,16 +637,6 @@ default
 		if(num == memusage)
 			{
 				MemTell;
-			}
-	}
-
-	event object_rez(key id)
-	{
-		if(llKey2Name(id) == adminHudName)
-			{
-				hudId = id;
-				llSleep(2.0);
-				llRegionSayTo(hudId, chatchannel, "parent|" + (string)llGetKey());
 			}
 	}
 
@@ -581,16 +713,22 @@ default
 			{
 				unless(EOF == data)
 					{
-						DEBUGmsg0("line", line, "of '", card, "' has been received");
+						IfStatus(stREAD_SET_ONGOING)
+						{
+							DEBUGmsg0("line", line, "of '", card, "' has been received");
 
-						ProcessLine(data, clicker);
-						line++;
+							SetStatus(stREAD_SET);
+							ProcessLine(data, clicker);
+							line++;
 
-						DEBUGmsg0("attempt to read card: '", card, "', line", line);
-
-						dataid = llGetNotecardLine(card, line);
-
-						DEBUG_TellMemory("DS data DTA");
+							DEBUGmsg0("attempt to read card: '", card, "', line", line);
+							llSetTimerEvent(fTIMER_TIMEOUT_DS);
+							dataid = llGetNotecardLine(card, line);
+						}
+						else
+							{
+								ERRORmsg("reading", card, "is not ongoing");
+							}
 
 						return;
 					}
@@ -599,6 +737,9 @@ default
 				//
 				DEBUGmsg0("dataserver: EOF");
 				DEBUGmsg3("slotMax:", slotMax, "last stride count:", lastStrideCount);
+
+				UnStatus(stREAD_SET_ONGOING);
+				llSetTimerEvent(0.0);
 
 				when(slotMax < lastStrideCount)
 					{
@@ -690,16 +831,29 @@ default
 				return;
 			}
 
-		if((id == btnid) && (data != EOF))
+		if(id == btnid)
 			{
-				ProcessLine(data, clicker);
-				btnline++;
+				when(EOF == data)
+					{
+						UnStatus(stREAD_BTN_ONGOING);
+						llSetTimerEvent(0.0);
+						return;
+					}
 
-				DEBUGmsg0("attempt to read btn card: '", btncard, "', line", btnline);
+				IfStatus(stREAD_BTN_ONGOING)
+				{
+					SetStatus(stREAD_BTN);
+					ProcessLine(data, clicker);
+					btnline++;
 
-				btnid = llGetNotecardLine(btncard, btnline);
-
-				DEBUG_TellMemory("DS data button");
+					DEBUGmsg0("attempt to read btn card: '", btncard, "', line", btnline);
+					llSetTimerEvent(fTIMER_TIMEOUT_DS);
+					btnid = llGetNotecardLine(btncard, btnline);
+				}
+				else
+					{
+						ERRORmsg("reading", btncard, "is not ongoing");
+					}
 			}
 	}
 
@@ -849,4 +1003,34 @@ default
 		{
 			llResetScript();
 		}
+
+	event object_rez(key k)
+	{
+		int $_ = LstIdx(lRezzing, RemoteName(k));
+		if(iIsUndetermined($_))
+			{
+				ERRORmsg("unexpected rezz");
+				return;
+			}
+
+		if(RemoteName(k) == adminHudName)
+			{
+				hudId = k;
+				llRegionSayTo(hudId, chatchannel, "parent|" + (string)llGetKey());
+				return;
+			}
+
+		$_ /= iSTRIDE_lRezzing;
+
+		llRegionSayTo(k, chatchannel, sprintlt("MOVEPROP", sRezzingToName($_), vRezzingToPos($_)));
+		yRezzingRM($_);
+	}
+
+	event timer()
+	{
+		UnStatus(stREAD_BTN_ONGOING);
+		UnStatus(stREAD_SET_ONGOING);
+		llSetTimerEvent(0.0);
+		ERRORmsg("card reading timed out");
+	}
 }

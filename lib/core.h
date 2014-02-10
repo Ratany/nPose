@@ -33,7 +33,10 @@
 int status = 0;
 #define stADJUSTERS                1
 #define stEXPLICIT                 2
-
+#define stREAD_BTN                 4
+#define stREAD_SET                 8
+#define stREAD_BTN_ONGOING        16
+#define stREAD_SET_ONGOING        32
 
 
 integer btnline;
@@ -45,7 +48,7 @@ integer line;
 integer slotMax = 0;
 
 key btnid;
-key clicker;
+key clicker = NULL_KEY;
 key dataid;
 key hudId;
 
@@ -58,6 +61,28 @@ string btncard;
 string card;
 
 list slots;
+
+
+// list of [name, pos] to move rezzed objects into position
+//
+#define iSTRIDE_lRezzing           2
+
+#define iIDX_lRezzing_Name         0
+#define iIDX_lRezzing_Pos          1
+
+#define sRezzingToName(_idx)       llList2String(lRezzing, iSTRIDE_lRezzing * _idx + iIDX_lRezzing_Name)
+#define vRezzingToPos(_idx)        llList2Vector(lRezzing, iSTRIDE_lRezzing * _idx + iIDX_lRezzing_Pos)
+#define yRezzingAdd(_name, _pos)   (lRezzing += [_name, _pos])
+#define yRezzingRM(_idx)           (lRezzing = llDeleteSubList(lRezzing, _idx * iSTRIDE_lRezzing, _idx * iSTRIDE_lRezzing + iSTRIDE_lRezzing - 1))
+
+list lRezzing = [];
+// /
+
+
+// timeout for dataserver events
+//
+#define fTIMER_TIMEOUT_DS          30.0
+
 
 
 #endif  // _CORE
