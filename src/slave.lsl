@@ -330,7 +330,7 @@ default
 				llSay(chatchannel, "adjuster_die");
 				adjusters = [];
 
-				if(llGetInventoryType("Adjuster") & INVENTORY_OBJECT)
+				if(llGetInventoryType("Adjuster") == INVENTORY_OBJECT)
 					{
 						RezNextAdjuster();
 					}
@@ -344,7 +344,7 @@ default
 
 		if(num == STOPADJUST)   //stopadjust has been chosen from the menu
 			{
-				llMessageLinked(LINK_SET, 204, "", "");
+				llMessageLinked(LINK_SET, DUMP, "", "");
 				llSay(chatchannel, "adjuster_die");
 				adjusters = [];
 

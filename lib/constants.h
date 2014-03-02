@@ -46,7 +46,7 @@
 #define cardprefix                                "SET:"
 #define defaultprefix                             "DEFAULT:"
 #define iADJUST_UPDATE               3
-#define iADJUST_UPDATE_ADJUSTERS(_num, _str)      (2 == (_num) && "RezAdjuster" == (_str))
+#define iADJUST_UPDATE_ADJUSTERS(_num, _str)      ((2 == (_num)) && !("RezAdjuster" != (_str)))
 #define iBUTTONUPDATE                             (seatupdate + 1)
 #define iRCV_CHATCHANNEL             1
 #define iTOGGLE_FACIALS           -241

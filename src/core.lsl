@@ -651,7 +651,7 @@ default
 
 		unless(name != "Adjuster")
 			{
-				llMessageLinked(LINK_SET, 3, message, id);
+				llMessageLinked(LINK_SET, iADJUST_UPDATE, message, id);
 
 				return;
 			}

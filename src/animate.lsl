@@ -669,8 +669,7 @@ default
 										// can´t just "queue up" the requests here, so flop
 										// back to the perm event
 										//
-										// In case the event is never triggered, iLastAnimatedSlot
-										// is reset and the timer stays on to query the next agent.
+										// In case the event is never triggered, the timer stays on to query the next agent.
 										//
 										return;
 									}
